@@ -1,0 +1,2890 @@
+interfaces:
+  io-mode: 
+    __label: 'interfaces/io-mode'
+    __widget: 'selectbox'
+    __value: 'packet_mmap_raw'
+    __datatype: 'str'
+    __options: [packet_mmap_raw,packet_mmap,raw]
+  io-slots: 
+    __label: 'interfaces/io-slots'
+    __widget: 'text_input'
+    __value: '4096'
+    __datatype: 'str'
+    __options: []
+  io-burst:
+    __label: 'interfaces/io-burst'
+    __widget: 'number_input'
+    __value: 256
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  qdisc-bypass: 
+    __label: 'interfaces/qdisc-bypass'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  tx-interval:
+    __label: 'interfaces/tx-interval'
+    __widget: 'number_input'
+    __value: 0.1
+    __datatype: 'float'
+    __options:
+      __min: 0.0001
+      __max: 1000.0
+      __step: 100.0
+  rx-interval:
+    __label: 'interfaces/rx-interval'
+    __widget: 'number_input'
+    __value: 0.1
+    __datatype: 'float'
+    __options:
+      __min: 0.0001
+      __max: 1000.0
+      __step: 100.0
+  tx-threads:
+    __label: 'interfaces/tx-threads'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  rx-threads:
+    __label: 'interfaces/rx-threads'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  capture-include-streams:
+    __label: 'interfaces/capture-include-streams'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  mac-modifier:
+    __label: 'interfaces/mac-modifier'
+    __widget: 'slider'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+  links: 
+  - interface:
+      __label: 'interfaces/links/interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    description:
+      __label: 'interfaces/links/description'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    mac:
+      __label: 'interfaces/links/mac'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    lag-interface:
+      __label: 'interfaces/links/lag-interface'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    lacp-priority:
+      __label: 'interfaces/links/lacp-priority'
+      __widget: 'text_input'
+      __value: '32768'
+      __datatype: 'str'
+      __options: []
+    tx-cpuset:
+      __label: 'interfaces/links/tx-cpuset'
+      __widget: 'text_input'
+      __value: '0'
+      __datatype: 'str'
+      __options: []
+    rx-cpuset: 
+      __label: 'interfaces/links/rx-cpuset'
+      __widget: 'text_input'
+      __value: 0
+      __datatype: 'str'
+      __options: []
+    io-mode:
+      __label: 'interfaces/links/io-mode'
+      __widget: 'selectbox'
+      __value: 'packet_mmap_raw'
+      __datatype: 'str'
+      __options: ['packet_mmap_raw','packet_mmap','raw']
+    io-burst:
+      __label: 'interfaces/links/io-burst'
+      __widget: 'number_input'
+      __value: 256
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 65535
+        __step: 1000
+    io-slots:
+      __label: 'interfaces/links/io-slots'
+      __widget: 'number_input'
+      __value: 4096
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 65535
+        __step: 10000
+    io-slots-tx:
+      __label: 'interfaces/links/io-slots-tx'
+      __widget: 'number_input'
+      __value: 4096
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 65535
+        __step: 100
+    io-slots-rx:
+      __label: 'interfaces/links/io-slots-rx'
+      __widget: 'number_input'
+      __value: 4096
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 65535
+        __step: 100
+    qdisc-bypass:
+      __label: 'interfaces/links/qdisc-bypass'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    tx-interval:
+      __label: 'interfaces/links/tx-interval'
+      __widget: 'number_input'
+      __value: 0.1
+      __datatype: 'float'
+      __options:
+        __min: 0.0001
+        __max: 1000.0
+        __step: 100.0
+    rx-interval:
+      __label: 'interfaces/links/rx-interval'
+      __widget: 'number_input'
+      __value: 0.1
+      __datatype: 'float'
+      __options:
+        __min: 0.0001
+        __max: 1000.0
+        __step: 100.0
+    tx-threads:
+      __label: 'interfaces/links/tx-threads'
+      __widget: 'text_input'
+      __value: '0'
+      __datatype: 'str'
+      __options: []
+    rx-threads:
+      __label: 'interfaces/links/rx-threads'
+      __widget: 'text_input'
+      __value: '0'
+      __datatype: 'str'
+      __options: []
+  lag:
+  - interface:
+      __label: 'interfaces/lag/interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    lacp:
+      __label: 'interfaces/lag/lacp'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    lacp-timeout-short:
+      __label: 'interfaces/lag/lacp-timeout-short'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    lacp-system-priority:
+      __label: 'interfaces/lag/lacp-system-priority'
+      __widget: 'text_input'
+      __value: '32768'
+      __datatype: 'str'
+      __options: []
+    lacp-system-id:
+      __label: 'interfaces/lag/lacp-system-id'
+      __widget: 'text_input'
+      __value: '02:ff:ff:ff:ff:00'
+      __datatype: 'str'
+      __options: []
+    lacp-min-active-links:
+      __label: 'interfaces/lag/lacp-min-active-links'
+      __widget: 'text_input'
+      __value: '0'
+      __datatype: 'str'
+      __options: []
+    lacp-max-active-links:
+      __label: 'interfaces/lag/lacp-max-active-links'
+      __widget: 'text_input'
+      __value: 255
+      __datatype: 'str'
+      __options: []
+    mac:
+      __label: 'interfaces/lag/mac'
+      __widget: 'text_input'
+      __value: '02:ff:ff:ff:ff:<interface-id>'
+      __datatype: 'str'
+      __options: []
+  network:
+  - interface:
+      __label: 'interfaces/network/interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    address:
+      __label: 'interfaces/network/address'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    _comment:
+      __label: 'interfaces/network/_comment'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    gateway:
+      __label: 'interfaces/network/gateway'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    address-ipv6:
+      __label: 'interfaces/network/address-ipv6'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    gateway-ipv6:
+      __label: 'interfaces/network/gateway-ipv6'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ipv6-router-advertisement:
+      __label: 'interfaces/network/ipv6-router-advertisement'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    mtu:
+      __label: 'interfaces/network/mtu'
+      __widget: 'number_input'
+      __value: 1500
+      __datatype: 'int'
+      __options:
+        __min: 64
+        __max: 9000
+        __step: 100
+    vlan:
+      __label: 'interfaces/network/vlan'
+      __widget: 'number_input'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 4094
+        __step: 1
+    gateway-mac:
+      __label: 'interfaces/network/gateway-mac'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    gateway-resolve-wait:
+      __label: 'interfaces/network/gateway-resolve-wait'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    isis-instance-id:
+      __label: 'interfaces/network/isis-instance-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    isis-level:
+      __label: 'interfaces/network/isis-level'
+      __widget: 'slider'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 1
+        __max: 3
+    isis-p2p:
+      __label: 'interfaces/network/isis-p2p'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    isis-l1-metric:
+      __label: 'interfaces/network/isis-l1-metric'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    isis-l2-metric:
+      __label: 'interfaces/network/isis-l2-metric'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    isis-l1-priority:
+      __label: 'interfaces/network/isis-l1-priority'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    isis-l2-priority:
+      __label: 'interfaces/network/isis-l2-priority'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    ospfv2-instance-id:
+      __label: 'interfaces/network/ospfv2-instance-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ospfv2-type:
+      __label: 'interfaces/network/ospfv2-type'
+      __widget: 'selectbox'
+      __value: 'p2p'
+      __datatype: 'str'
+      __options: ['broadcast','p2p']
+    ospfv2-metric:
+      __label: 'interfaces/network/ospfv2-metric'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    ospfv3-instance-id:
+      __label: 'interfaces/network/ospfv3-instance-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ospfv3-type:
+      __label: 'interfaces/network/ospfv3-type'
+      __widget: 'selectbox'
+      __value: 'p2p'
+      __datatype: 'str'
+      __options: ['broadcast','p2p']
+    ospfv3-metric:
+      __label: 'interfaces/network/ospfv3-metric'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    ldp-instance-id:
+      __label: 'interfaces/network/ldp-instance-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+  access:
+  - interface:
+      __label: 'interfaces/access/interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    network-interface:
+      __label: 'interfaces/access/network-interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    _comment:
+      __label: 'interfaces/access/_comment'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    a10nsp-interface:
+      __label: 'interfaces/access/a10nsp-interface'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    type:
+      __label: 'interfaces/access/type'
+      __widget: 'selectbox'
+      __value: 'pppoe'
+      __datatype: 'str'
+      __options: ['pppoe','ipoe']
+    vlan-mode:
+      __label: 'interfaces/access/vlan-mode'
+      __widget: 'selectbox'
+      __value: '1:1'
+      __datatype: 'str'
+      __options: ['1:1','N:1']
+    qinq:
+      __label: 'interfaces/access/qinq'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    outer-vlan-min:
+      __label: 'interfaces/access/outer-vlan-min'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    outer-vlan-max:
+      __label: 'interfaces/access/outer-vlan-max'
+      __widget: 'number_input'
+      __value: 4094
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    outer-vlan-step:
+      __label: 'interfaces/access/outer-vlan-step'
+      __widget: 'text_input'
+      __value: '1'
+      __datatype: 'str'
+      __options: []
+    outer-vlan:
+      __label: 'interfaces/access/outer-vlan'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    inner-vlan-min:
+      __label: 'interfaces/access/inner-vlan-min'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    inner-vlan-max:
+      __label: 'interfaces/access/inner-vlan-max'
+      __widget: 'number_input'
+      __value: 4094
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    inner-vlan-step:
+      __label: 'interfaces/access/inner-vlan-step'
+      __widget: 'text_input'
+      __value: '1'
+      __datatype: 'str'
+      __options: []
+    inner-vlan:
+      __label: 'interfaces/access/inner-vlan'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    third-vlan:
+      __label: 'interfaces/access/third-vlan'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4094
+        __step: 1
+    ipv4:
+      __label: 'interfaces/access/ipv4'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    address:
+      __label: 'interfaces/access/address'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    address-iter:
+      __label: 'interfaces/access/address-iter'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    gateway:
+      __label: 'interfaces/access/gateway'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    gateway-iter:
+      __label: 'interfaces/access/gateway-iter'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ipv6:
+      __label: 'interfaces/access/ipv6'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    ipv6-link-local:
+      __label: 'interfaces/access/ipv6-link-local'
+      __widget: 'text_input'
+      __value: 'ipv6'
+      __datatype: 'str'
+      __options: []
+    cfm-cc:
+      __label: 'interfaces/access/cfm-cc'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    cfm-level:
+      __label: 'interfaces/access/cfm-level'
+      __widget: 'slider'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 7
+    cfm-ma-id:
+      __label: 'interfaces/access/cfm-ma-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    cfm-ma-name:
+      __label: 'interfaces/access/cfm-ma-name'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    username:
+      __label: 'interfaces/access/username'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    password:
+      __label: 'interfaces/access/password'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    authentication-protocol:
+      __label: 'interfaces/access/authentication-protocol'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    agent-circuit-id:
+      __label: 'interfaces/access/agent-circuit-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    agent-remote-id:
+      __label: 'interfaces/access/agent-remote-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    access-aggregation-circuit-id:
+      __label: 'interfaces/access/access-aggregation-circuit-id'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    rate-up:
+      __label: 'interfaces/access/rate-up'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    rate-down:
+      __label: 'interfaces/access/rate-down'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    dsl-type:
+      __label: 'interfaces/access/dsl-type'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ppp-mru:
+      __label: 'interfaces/access/ppp-mru'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ipcp:
+      __label: 'interfaces/access/ipcp'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    ip6cp:
+      __label: 'interfaces/access/ip6cp'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    dhcp:
+      __label: 'interfaces/access/dhcp'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    dhcpv6:
+      __label: 'interfaces/access/dhcpv6'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    dhcpv6-ldra:
+      __label: 'interfaces/access/dhcpv6-ldra'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    igmp-autostart:
+      __label: 'interfaces/access/igmp-autostart'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    igmp-version:
+      __label: 'interfaces/access/ipv6-link-local'
+      __widget: 'selectbox'
+      __value: '1'
+      __datatype: 'str'
+      __options: ['1','2','3']
+    access-line-profile-id:
+      __label: 'interfaces/access/access-line-profile-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    i1-start:
+      __label: 'interfaces/access/i1-start'
+      __widget: 'number_input'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4294967295
+        __step: 10
+    i1-step:
+      __label: 'interfaces/access/i1-step'
+      __widget: 'number_input'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4294967295
+        __step: 10
+    i2-start:
+      __label: 'interfaces/access/i2-start'
+      __widget: 'number_input'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4294967295
+        __step: 10
+    i2-step:
+      __label: 'interfaces/access/i2-step'
+      __widget: 'number_input'
+      __value: 1
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 4294967295
+        __step: 10
+    monkey:
+      __label: 'interfaces/access/monkey'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    session-limit:
+      __label: 'interfaces/access/session-limit'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 10000000
+        __step: 10000
+    session-traffic-autostart:
+      __label: 'interfaces/access/session-traffic-autostart'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    session-group-id:
+      __label: 'interfaces/access/session-group-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    stream-group-id:
+      __label: 'interfaces/access/stream-group-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    arp-client-group-id:
+      __label: 'interfaces/access/arp-client-group-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    icmp-client-group-id:
+      __label: 'interfaces/access/icmp-client-group-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    http-client-group-id:
+      __label: 'interfaces/access/http-client-group-id'
+      __widget: 'number_input'
+      __value: 0
+      __datatype: 'int'
+      __options:
+        __min: 0
+        __max: 65535
+        __step: 1000
+    tun:
+      __label: 'interfaces/access/tun'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+  a10nsp:
+  - interface:
+      __label: 'interfaces/a10nsp/interface'
+      __widget: 'customize'
+      __value: ''
+      __datatype: 'interface_auto'
+      __options: []
+    qinq:
+      __label: 'interfaces/a10nsp/qinq'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    mac:
+      __label: 'interfaces/a10nsp/mac'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+sessions:
+  count:
+    __label: 'sessions/count'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'str'
+    __options: []
+  max-outstanding:
+    __label: 'sessions/max-outstanding'
+    __widget: 'text_input'
+    __value: '800'
+    __datatype: 'str'
+    __options: []
+  start-rate:
+    __label: 'sessions/start-rate'
+    __widget: 'text_input'
+    __value: '400'
+    __datatype: 'str'
+    __options: []
+  stop-rate:
+    __label: 'sessions/stop-rate'
+    __widget: 'text_input'
+    __value: '400'
+    __datatype: 'str'
+    __options: []
+  start-delay:
+    __label: 'sessions/start-delay'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  reconnect:
+    __label: 'sessions/reconnect'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  autostart:
+    __label: 'sessions/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  monkey-autostart:
+    __label: 'sessions/monkey-autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  iterate-vlan-outer:
+    __label: 'sessions/iterate-vlan-outer'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+ipoe:
+  ipv6:
+    __label: 'ipoe/ipv6'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  ipv4:
+    __label: 'ipoe/ipv4'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  arp-timeout:
+    __label: 'ipoe/arp-timeout'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'str'
+    __options: []
+  arp-interval:
+    __label: 'ipoe/arp-interval'
+    __widget: 'text_input'
+    __value: '300'
+    __datatype: 'str'
+    __options: []
+pppoe:
+  session-time:
+    __label: 'pppoe/session-time'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  reconnect:
+    __label: 'pppoe/reconnect'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]  
+  discovery-timeout:
+    __label: 'pppoe/discovery-timeout'
+    __widget: 'text_input'
+    __value: '5'
+    __datatype: 'str'
+    __options: []
+  discovery-retry:
+    __label: 'pppoe/discovery-retry'
+    __widget: 'text_input'
+    __value: '10'
+    __datatype: 'str'
+    __options: []
+  service-name:
+    __label: 'pppoe/service-name'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  host-uniq:
+    __label: 'pppoe/host-uniq'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  max-payload:
+    __label: 'pppoe/max-payload'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  vlan-priority:
+    __label: 'pppoe/vlan-priority'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+ppp:
+  mru:
+    __label: 'ppp/mru'
+    __widget: 'number_input'
+    __value: 1492
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  authentication:
+    username:
+      __label: 'ppp/authentication/username'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    password:
+      __label: 'ppp/authentication/password'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    timeout:
+      __label: 'ppp/authentication/timeout'
+      __widget: 'text_input'
+      __value: '5'
+      __datatype: 'str'
+      __options: []
+    retry:
+      __label: 'ppp/authentication/retry'
+      __widget: 'text_input'
+      __value: '30'
+      __datatype: 'str'
+      __options: []
+    protocol:
+      __label: 'ppp/authentication/protocol'
+      __widget: 'selectbox'
+      __value: 'pap'
+      __datatype: 'str'
+      __options: ['pap','chap']
+  lcp:
+    conf-request-timeout:
+      __label: 'ppp/lcp/conf-request-timeout'
+      __widget: 'text_input'
+      __value: '5'
+      __datatype: 'str'
+      __options: []
+    conf-request-retry:
+      __label: 'ppp/lcp/conf-request-retry'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'str'
+      __options: []
+    keepalive-interval:
+      __label: 'ppp/lcp/keepalive-interval'
+      __widget: 'text_input'
+      __value: '30'
+      __datatype: 'str'
+      __options: []
+    keepalive-retry:
+      __label: 'ppp/lcp/keepalive-retry'
+      __widget: 'text_input'
+      __value: '3'
+      __datatype: 'str'
+      __options: []
+    start-delay: 
+      __label: 'ppp/lcp/start-delay'
+      __widget: 'text_input'
+      __value: '0'
+      __datatype: 'int'
+      __options: []
+    ignore-vendor-specific:
+      __label: 'ppp/lcp/ignore-vendor-specific'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    connection-status-message:
+      __label: 'ppp/lcp/connection-status-message'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+  ipcp:
+    enable:
+      __label: 'ppp/ipcp/enable'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    request-ip:
+      __label: 'ppp/ipcp/request-ip'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    request-dns1:
+      __label: 'ppp/ipcp/request-dns1'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    request-dns2:
+      __label: 'ppp/ipcp/request-dns2'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    conf-reject-ignore:
+      __label: 'ppp/ipcp/conf-reject-ignore'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    conf-request-timeout:
+      __label: 'ppp/ipcp/conf-request-timeout'
+      __widget: 'text_input'
+      __value: '5'
+      __datatype: 'int'
+      __options: []
+    conf-request-retry:
+      __label: 'ppp/ipcp/conf-request-retry'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'int'
+      __options: []
+  ip6cp:
+    enable:
+      __label: 'ppp/ip6cp/enable'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    conf-request-timeout:
+      __label: 'ppp/ip6cp/conf-request-timeout'
+      __widget: 'text_input'
+      __value: '5'
+      __datatype: 'int'
+      __options: []
+    conf-request-retry:
+      __label: 'ppp/ip6cp/conf-request-retry'
+      __widget: 'text_input'
+      __value: '10'
+      __datatype: 'int'
+      __options: []
+dhcp:
+  enable:
+    __label: 'dhcp/enable'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  broadcast:
+    __label: 'dhcp/broadcast'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  timeout:
+    __label: 'dhcp/timeout'
+    __widget: 'text_input'
+    __value: '5'
+    __datatype: 'int'
+    __options: []
+  retry:
+    __label: 'dhcp/retry'
+    __widget: 'text_input'
+    __value: '10'
+    __datatype: 'int'
+    __options: []
+  release-interval:
+    __label: 'dhcp/release-interval'
+    __widget: 'text_input'
+    __value: 1
+    __datatype: 'int'
+    __options: []
+  release-retry:
+    __label: 'dhcp/release-retry'
+    __widget: 'text_input'
+    __value: '3'
+    __datatype: 'int'
+    __options: []
+  tos:
+    __label: 'dhcp/tos'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  vlan-priority:
+    __label: 'dhcp/vlan-priority'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  access-line:
+    __label: 'dhcp/access-line'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+dhcpv6:
+  enable:
+    __label: 'dhcpv6/enable'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  ia-na:
+    __label: 'dhcpv6/ia-na'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  ia-pd:
+    __label: 'dhcpv6/ia-pd'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  rapid-commit:
+    __label: 'dhcpv6/rapid-commit'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  timeout:
+    __label: 'dhcpv6/timeout'
+    __widget: 'text_input'
+    __value: '5'
+    __datatype: 'int'
+    __options: []
+  retry:
+    __label: 'dhcpv6/retry'
+    __widget: 'text_input'
+    __value: '10'
+    __datatype: 'int'
+    __options: []
+  access-line:
+    __label: 'dhcpv6/access-line'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  ldra:
+    __label: 'dhcpv6/ldra'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+igmp:
+  autostart:
+    __label: 'igmp/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  start-delay:
+    __label: 'igmp/start-delay'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'int'
+    __options: []
+  version:
+    __label: 'igmp/version'
+    __widget: 'selectbox'
+    __value: '1'
+    __datatype: 'str'
+    __options: ['1','2','3']
+  combined-leave-join:
+    __label: 'igmp/combined-leave-join'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  group:
+    __label: 'igmp/group'
+    __widget: 'text_input'
+    __value: '0.0.0.0'
+    __datatype: 'str'
+    __options: []
+  group-iter:
+    __label: 'igmp/group-iter'
+    __widget: 'text_input'
+    __value: '0.0.0.1'
+    __datatype: 'str'
+    __options: []
+  group-count:
+    __label: 'igmp/group-count'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'int'
+    __options: []
+  source:
+    __label: 'igmp/source'
+    __widget: 'text_input'
+    __value: '0.0.0.0'
+    __datatype: 'str'
+    __options: []
+  zapping-interval:
+    __label: 'igmp/zapping-interval'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  zapping-count:
+    __label: 'igmp/zapping-count'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  zapping-wait:
+    __label: 'igmp/zapping-wait'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  view-duration:
+    __label: 'igmp/view-duration'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  max-join-delay:
+    __label: 'igmp/max-join-delay'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  send-multicast-traffic:
+    __label: 'igmp/send-multicast-traffic'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  multicast-traffic-length:
+    __label: 'igmp/multicast-traffic-length'
+    __widget: 'text_input'
+    __value: 76
+    __datatype: 'int'
+    __options: []
+  multicast-traffic-tos:
+    __label: 'igmp/multicast-traffic-tos'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  multicast-traffic-pps:
+    __label: 'igmp/multicast-traffic-pps'
+    __widget: 'text_input'
+    __value: 1000
+    __datatype: 'int'
+    __options: []
+  network-interface:
+    __label: 'igmp/network-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+l2tp-server:
+- name:
+    __label: 'l2tp-server/name'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  address:
+    __label: 'l2tp-server/address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  secret:
+    __label: 'l2tp-server/secret'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  receive-window-size:
+    __label: 'l2tp-server/receive-window-size'
+    __widget: 'number_input'
+    __value: 16
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 100
+      __step: 1
+  max-retry:
+    __label: 'l2tp-server/max-retry'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 100
+      __step: 1
+  congestion-mode:
+    __label: 'l2tp-server/congestion-mode'
+    __widget: 'selectbox'
+    __value: 'default'
+    __datatype: 'str'
+    __options: ['default','slow','aggressive']
+  hello-interval:
+    __label: 'l2tp-server/hello-interval'
+    __widget: 'number_input'
+    __value: 30
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 100
+      __step: 1
+  data-control-priority:
+    __label: 'l2tp-server/data-control-priority'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  data-length:
+    __label: 'l2tp-server/data-length'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  data-offset:
+    __label: 'l2tp-server/data-offset'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  control-tos:
+    __label: 'l2tp-server/control-tos'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  data-control-tos:
+    __label: 'l2tp-server/data-control-tos'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  lcp-padding:
+    __label: 'l2tp-server/lcp-padding'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1
+  client-auth-id:
+    __label: 'l2tp-server/client-auth-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+traffic:
+  autostart:
+    __label: 'traffic/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  stop-verified:
+    __label: 'traffic/stop-verified'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  stream-autostart:
+    __label: 'traffic/stream-autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  stream-rate-calculation:
+    __label: 'traffic/stream-rate-calculation'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  stream-delay-calculation:
+    __label: 'traffic/stream-delay-calculation'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  stream-burst-ms:
+    __label: 'traffic/stream-burst-ms'
+    __widget: 'number_input'
+    __value: 100
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 1000
+      __step: 100
+  multicast-traffic-autostart: 
+    __label: 'traffic/multicast-traffic-autostart'
+    __widget: 'selectbox'
+    __value: true
+    __datatype: 'bool'
+    __options: [true,false]
+  udp-checksum:
+    __label: 'traffic/udp-checksum'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  reassemble-fragments:
+    __label: 'traffic/reassemble-fragments'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+streams:
+- name:
+    __label: 'streams/name'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  stream-group-id:
+    __label: 'streams/stream-group-id'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  type:
+    __label: 'streams/type'
+    __widget: 'selectbox'
+    __value: ''
+    __datatype: 'str'
+    __options: ['ipv4','ipv6','ipv6pd']
+  direction:
+    __label: 'streams/direction'
+    __widget: 'selectbox'
+    __value: ''
+    __datatype: 'str'
+    __options: ['both','upstream','downstream']
+  autostart:
+    __label: 'streams/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  source-port:
+    __label: 'streams/source-port'
+    __widget: 'number_input'
+    __value: 65056
+    __datatype: 'int'
+    __options:
+      __min: 10000
+      __max: 65535
+      __step: 1000
+  destination-port:
+    __label: 'streams/destination-port'
+    __widget: 'number_input'
+    __value: 65056
+    __datatype: 'int'
+    __options:
+      __min: 50000
+      __max: 65535
+      __step: 1000
+  ipv4-df:
+    __label: 'streams/ipv4-df'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  priority:
+    __label: 'streams/priority'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 256
+      __step: 1
+  vlan-priority:
+    __label: 'streams/vlan-priority'
+    __widget: 'slider'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 7
+  inner-vlan-priority:
+    __label: 'streams/inner-vlan-priority'
+    __widget: 'slider'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 7
+  length:
+    __label: 'streams/length'
+    __widget: 'number_input'
+    __value: 128
+    __datatype: 'int'
+    __options:
+      __min: 76
+      __max: 9000
+      __step: 100
+  ttl:
+    __label: 'streams/ttl'
+    __widget: 'number_input'
+    __value: 64
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  pps:
+    __label: 'streams/pps'
+    __widget: 'text_input'
+    __value: '1.0'
+    __datatype: 'str'
+    __options: []
+  bps:
+    __label: 'streams/bps'
+    __widget: 'text_input'
+    __value: '1000'
+    __datatype: 'str'
+    __options: []
+  Gbps:
+    __label: 'streams/Gbps'
+    __widget: 'number_input'
+    __value: 1.0
+    __datatype: 'float'
+    __options:
+      __min: 0.0
+      __max: 100.0
+      __step: 1.0
+  Mbps:
+    __label: 'streams/Mbps'
+    __widget: 'number_input'
+    __value: 1.0
+    __datatype: 'float'
+    __options:
+      __min: 0.0
+      __max: 1024.0
+      __step: 10.0
+  pps-upstream:
+    __label: 'streams/pps-upstream'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  bps-upstream:
+    __label: 'streams/bps-upstream'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  setup-interval:
+    __label: 'streams/setup-interval'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 900
+      __step: 1
+  a10nsp-interface:
+    __label: 'streams/a10nsp-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+  network-interface:
+    __label: 'streams/network-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+  network-ipv4-address:
+    __label: 'streams/network-ipv4-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  network-ipv6-address:
+    __label: 'streams/network-ipv6-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  destination-ipv4-address:
+    __label: 'streams/destination-ipv4-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  destination-ipv6-address:
+    __label: 'streams/destination-ipv6-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  access-ipv4-source-address:
+    __label: 'streams/access-ipv4-source-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  access-ipv6-source-address:
+    __label: 'streams/access-ipv6-source-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  max-packets:
+    __label: 'streams/max-packets'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  start-delay:
+    __label: 'streams/start-delay'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  tx-label1:
+    __label: 'streams/tx-label1'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  tx-label1-exp:
+    __label: 'streams/tx-label1-exp'
+    __widget: 'text_input'
+    __value: 0
+    __datatype: 'int'
+    __options: []
+  tx-label1-ttl:
+    __label: 'streams/tx-label1-ttl'
+    __widget: 'number_input'
+    __value: 255
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 255
+      __step: 1
+  tx-label2:
+    __label: 'streams/tx-label2'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  tx-label2-exp:
+    __label: 'streams/tx-label2-exp'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  tx-label2-ttl:
+    __label: 'streams/tx-label2-ttl'
+    __widget: 'number_input'
+    __value: 255
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 255
+      __step: 1
+  rx-label1:
+    __label: 'streams/rx-label1'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  rx-label2:
+    __label: 'streams/rx-label2'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ldp-ipv4-lookup-address:
+    __label: 'streams/ldp-ipv4-lookup-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ldp-ipv6-lookup-address:
+    __label: 'streams/ldp-ipv6-lookup-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  nat:
+    __label: 'streams/nat'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  raw-tcp:
+    __label: 'streams/raw-tcp'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+session-traffic:
+  autostart:
+    __label: 'session-traffic/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  ipv4-pps:
+    __label: 'session-traffic/ipv4-pps'
+    __widget: 'tex'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  ipv4-label:
+    __label: 'session-traffic/ipv4-label'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ipv4-address:
+    __label: 'session-traffic/ipv4-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ipv6-pps:
+    __label: 'session-traffic/ipv6-pps'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ipv6-label:
+    __label: 'session-traffic/ipv6-label'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ipv6-address:
+    __label: 'session-traffic/ipv6-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ipv6pd-pps:
+    __label: 'session-traffic/ipv6pd-pps'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+access-line:
+  agent-circuit-id:
+    __label: 'access-line/agent-circuit-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  agent-remote-id:
+    __label: 'access-line/agent-remote-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  access-aggregation-circuit-id:
+    __label: 'access-line/access-aggregation-circuit-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  rate-up:
+    __label: 'access-line/rate-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  rate-down:
+    __label: 'access-line/rate-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  dsl-type:
+    __label: 'access-line/dsl-type'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+access-line-profiles:
+  access-line-profile-id:
+    __label: 'access-line-profiles/access-line-profile-id'
+    __widget: 'number_input'
+    __value: 1
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  act-up:
+    __label: 'access-line-profiles/act-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  act-down:
+    __label: 'access-line-profiles/act-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  min-up:
+    __label: 'access-line-profiles/min-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  min-down:
+    __label: 'access-line-profiles/min-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  att-up:
+    __label: 'access-line-profiles/att-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  att-down:
+    __label: 'access-line-profiles/att-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  max-up:
+    __label: 'access-line-profiles/max-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  max-down:
+    __label: 'access-line-profiles/max-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  min-up-low:
+    __label: 'access-line-profiles/min-up-low'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  min-down-low:
+    __label: 'access-line-profiles/min-down-low'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  max-interl-delay-up:
+    __label: 'access-line-profiles/max-interl-delay-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  act-interl-delay-up:
+    __label: 'access-line-profiles/act-interl-delay-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  max-interl-delay-down:
+    __label: 'access-line-profiles/max-interl-delay-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  act-interl-delay-down:
+    __label: 'access-line-profiles/act-interl-delay-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  data-link-encaps:
+    __label: 'access-line-profiles/data-link-encaps'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  dsl-type:
+    __label: 'access-line-profiles/dsl-type'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  pon-type:
+    __label: 'access-line-profiles/pon-type'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  etr-up:
+    __label: 'access-line-profiles/etr-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  etr-down:
+    __label: 'access-line-profiles/etr-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  attetr-up:
+    __label: 'access-line-profiles/attetr-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  attetr-down:
+    __label: 'access-line-profiles/attetr-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  gdr-up:
+    __label: 'access-line-profiles/gdr-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  gdr-down:
+    __label: 'access-line-profiles/gdr-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  attgdr-up:
+    __label: 'access-line-profiles/attgdr-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  attgdr-down:
+    __label: 'access-line-profiles/attgdr-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ont-onu-avg-down:
+    __label: 'access-line-profiles/ont-onu-avg-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ont-onu-peak-down:
+    __label: 'access-line-profiles/ont-onu-peak-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ont-onu-max-up:
+    __label: 'access-line-profiles/ont-onu-max-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  ont-onu-ass-up:
+    __label: 'access-line-profiles/ont-onu-ass-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  pon-max-up:
+    __label: 'access-line-profiles/pon-max-up'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  pon-max-down:
+    __label: 'access-line-profiles/pon-max-down'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+  pon-access-line-version:
+    __label: 'access-line-profiles/pon-access-line-version'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'str'
+    __options: []
+isis:
+  instance-id:
+    __label: 'isis/instance-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level:
+    __label: 'isis/level'
+    __widget: 'number_input'
+    __value: 3
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 3
+      __step: 1
+  protocol-ipv4:
+    __label: 'isis/protocol-ipv4'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  protocol-ipv6:
+    __label: 'isis/protocol-ipv6'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  level1-auth-key:
+    __label: 'isis/level1-auth-key'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level1-auth-type:
+    __label: 'isis/level1-auth-type'
+    __widget: 'selectbox'
+    __value: ''
+    __datatype: 'str'
+    __options: ['simple','md5']
+  level1-auth-hello:
+    __label: 'isis/level1-auth-hello'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level1-auth-csnp:
+    __label: 'isis/level1-auth-csnp'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level1-auth-psnp:
+    __label: 'isis/level1-auth-psnp'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level2-auth-key:
+    __label: 'isis/level2-auth-key'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level2-auth-type:
+    __label: 'isis/level2-auth-type'
+    __widget: 'selectbox'
+    __value: ''
+    __datatype: 'str'
+    __options: ['simple','md5']
+  level2-auth-hello:
+    __label: 'isis/level2-auth-hello'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level2-auth-csnp:
+    __label: 'isis/level2-auth-csnp'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  level2-auth-psnp:
+    __label: 'isis/level2-auth-psnp'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  hello-interval:
+    __label: 'isis/hello-interval'
+    __widget: 'number_input'
+    __value: 10
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  hello-padding:
+    __label: 'isis/hello-padding'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  hold-time:
+    __label: 'isis/hold-time'
+    __widget: 'number_input'
+    __value: 30
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  lsp-buffer-size:
+    __label: 'isis/lsp-buffer-size'
+    __widget: 'number_input'
+    __value: 1492
+    __datatype: 'int'
+    __options:
+      __min: 128
+      __max: 9192
+      __step: 1000
+  lsp-lifetime:
+    __label: 'isis/lsp-lifetime'
+    __widget: 'number_input'
+    __value: 65535
+    __datatype: 'int'
+    __options:
+      __min: 330
+      __max: 65535
+      __step: 1000
+  lsp-refresh-interval:
+    __label: 'isis/lsp-refresh-interval'
+    __widget: 'number_input'
+    __value: 300
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  lsp-retry-interval: 
+    __label: 'isis/lsp-retry-interval'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  lsp-tx-interval:
+    __label: 'isis/lsp-tx-interval'
+    __widget: 'number_input'
+    __value: 10
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  lsp-tx-window-size:
+    __label: 'isis/lsp-tx-window-size'
+    __widget: 'number_input'
+    __value: 1
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  csnp-interval:
+    __widget: 'number_input'
+    __value: 30
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  hostname:
+    __label: 'isis/hostname'
+    __widget: 'text_input'
+    __value: 'bngblaster'
+    __datatype: 'str'
+    __options: ['bngblaster']
+  router-id:
+    __label: 'isis/router-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  system-id:
+    __label: 'isis/system-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  area:
+    __label: 'isis/area'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  sr-algo:
+    __label: 'isis/sr-algo'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  sr-base:
+    __label: 'isis/sr-base'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  sr-range:
+    __label: 'isis/sr-range'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  sr-node-sid:
+    __label: 'isis/sr-node-sid'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  adjacency-sid-base:
+    __label: 'isis/adjacency-sid-base'
+    __widget: 'number_input'
+    __value: 256
+    __datatype: 'int'
+    __options:
+      __min: 256
+      __max: 4096
+      __step: 100
+  teardown-time:
+    __label: 'isis/teardown-time'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  external:
+    purge:
+      __label: 'isis/external/purge'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    auto-refresh:
+      __label: 'isis/external/auto-refresh'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    mrt-file:
+      __label: 'isis/external/mrt-file'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    connections:
+    - system-id:
+        __label: 'isis/external/connections/system-id'
+        __widget: 'text_input'
+        __value: ''
+        __datatype: 'str'
+        __options: []
+      l1-metric:
+        __label: 'isis/external/connections/l1-metric'
+        __widget: 'text_input'
+        __value: '10'
+        __datatype: 'int'
+        __options: []
+      l2-metric:
+        __label: 'isis/external/connections/l2-metric'
+        __widget: 'text_input'
+        __value: '10'
+        __datatype: 'int'
+        __options: []
+ospf:
+  instance-id:
+    __label: 'ospf/instance-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  version:
+    __label: 'ospf/version'
+    __widget: 'number_input'
+    __value: 2
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 3
+      __step: 1
+  auth-key:
+    __label: 'ospf/auth-key'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  auth-type:
+    __label: 'ospf/auth-type'
+    __widget: 'selectbox'
+    __value: ''
+    __datatype: 'str'
+    __options: ['simple','md5']
+  hello-interval:
+    __label: 'ospf/hello-interval'
+    __widget: 'number_input'
+    __value: 10
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  dead-interval:
+    __label: 'ospf/dead-interval'
+    __widget: 'number_input'
+    __value: 40
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  lsa-retry-interval:
+    __label: 'ospf/lsa-retry-interval'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  hostname:
+    __label: 'ospf/hostname'
+    __widget: 'text_input'
+    __value: 'bngblaster'
+    __datatype: 'str'
+    __options: ['bngblaster']
+  router-id:
+    __label: 'ospf/router-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  router-priority:
+    __label: 'ospf/router-priority'
+    __widget: 'number_input'
+    __value: 64
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  area:
+    __label: 'ospf/area'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  sr-base:
+    __label: 'ospf/sr-base'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  sr-range:
+    __label: 'ospf/sr-range'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  sr-node-sid: 
+    __label: 'ospf/sr-node-sid'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 1048575
+      __step: 10000
+  teardown-time:
+    __label: 'ospf/teardown-time'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  external:
+    purge:
+      __label: 'ospf/external/purge'
+      __widget: 'selectbox'
+      __value: false
+      __datatype: 'bool'
+      __options: [true,false]
+    mrt-file:
+      __label: 'ospf/external/mrt-file'
+      __widget: 'text_input'
+      __value: ''
+      __datatype: 'str'
+      __options: []
+    connections:
+    - router-id: 
+        __label: 'ospf/external/connections/router-id'
+        __widget: 'text_input'
+        __value: ''
+        __datatype: 'str'
+        __options: []
+      metric:
+        __label: 'ospf/external/connections/metric'
+        __widget: 'number_input'
+        __value: 10
+        __datatype: 'int'
+        __options:
+          __min: 0
+          __max: 4294967295
+          __step: 10000
+      local-ipv4-address:
+        __label: 'ospf/external/connections/local-ipv4-address'
+        __widget: 'text_input'
+        __value: ''
+        __datatype: 'str'
+        __options: []
+      local-interface-id:
+        __label: 'ospf/external/connections/local-interface-id'
+        __widget: 'text_input'
+        __value: '1'
+        __datatype: 'int'
+        __options: []
+      neighbor-interface-id:
+        __label: 'ospf/external/connections/neighbor-interface-id'
+        __widget: 'text_input'
+        __value: ''
+        __datatype: 'str'
+        __options: []
+ldp:
+  instance-id:
+    __label: 'ldp/instance-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  keepalive-time:
+    __label: 'ldp/keepalive-time'
+    __widget: 'number_input'
+    __value: 15
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  hold-time:
+    __label: 'ldp/hold-time'
+    __widget: 'number_input'
+    __value: 15
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  teardown-time:
+    __label: 'ldp/teardown-time'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  hostname:
+    __label: 'ldp/hostname'
+    __widget: 'text_input'
+    __value: 'bngblaster'
+    __datatype: 'str'
+    __options: ['bngblaster']
+  lsr-id:
+    __label: 'ldp/lsr-id'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ipv6-transport-address:
+    __label: 'ldp/ipv6-transport-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  ipv4-transport-address:
+    __label: 'ldp/ipv4-transport-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  no-ipv4-transport:
+    __label: 'ldp/no-ipv4-transport'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  prefer-ipv4-transport:
+    __label: 'ldp/prefer-ipv4-transport'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]  
+  raw-update-file:
+    __label: 'ldp/raw-update-file'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+bgp:
+  network-interface:
+    __label: 'bgp/network-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+  local-address:
+    __label: 'bgp/local-address'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  local-as:
+    __label: 'bgp/local-as'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  peer-address:
+    __label: 'bgp/peer-address'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  peer-as:
+    __label: 'bgp/peer-as'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  hold-time:
+    __label: 'bgp/hold-time'
+    __widget: 'number_input'
+    __value: 90
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  id:
+    __label: 'bgp/id'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  tos:
+    __label: 'bgp/tos'
+    __widget: 'number_input'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  ttl:
+    __label: 'bgp/ttl'
+    __widget: 'number_input'
+    __value: 255
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 255
+      __step: 1
+  reconnect:
+    __label: 'bgp/reconnect'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  start-traffic:
+    __label: 'bgp/start-traffic'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  teardown-time:
+    __label: 'bgp/teardown-time'
+    __widget: 'number_input'
+    __value: 5
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65535
+      __step: 1000
+  raw-update-file:
+    __label: 'bgp/raw-update-file'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  family:
+    __label: 'bgp/family'
+    __widget: 'multiselect'
+    __value: ['ipv4-unicast', 'ipv6-unicast']
+    __datatype: 'str'
+    __options: ['ipv4-unicast', 'ipv6-unicast','ipv4-multicast', 'ipv6-multicast','ipv4-labeled-unicast', 'ipv6-labeled-unicast','ipv4-vpn-unicast', 'ipv6-vpn-unicast', 'ipv4-vpn-multicast', 'ipv6-vpn-multicast','ipv4-flow', 'ipv6-flow', 'evpn']
+  extended-nexthop:
+    __label: 'bgp/extended-nexthop'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+http-client:
+  name:
+    __label: 'http-client/name'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  http-client-group-id:
+    __label: 'http-client/http-client-group-id'
+    __widget: 'number_input'
+    __value: 1
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  url:
+    __label: 'http-client/url'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  destination-port:
+    __label: 'http-client/destination-port'
+    __widget: 'number_input'
+    __value: 80
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  autostart:
+    __label: 'http-client/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  start-delay:
+    __label: 'http-client/start-delay'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  destination-ipv4-address:
+    __label: 'http-client/destination-ipv4-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  destination-ipv6-address:
+    __label: 'http-client/destination-ipv6-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+htttp-server:
+  name:
+    __label: 'http-server/name'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+  network-interface:
+    __label: 'htttp-server/network-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+  port:
+    __label: 'http-server/port'
+    __widget: 'number_input'
+    __value: 80
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  ipv4-address:
+    __label: 'http-server/ipv4-address'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  ipv6-address:
+    __label: 'http-server/ipv6-address'
+    __widget: 'text_input'
+    __value: ''
+    __datatype: 'str'
+    __options: []
+icmp-client:
+  icmp-client-group-id:
+    __label: 'icmp-client/icmp-client-group-id'
+    __widget: 'number_input'
+    __value: 1
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  network-interface: 
+    __label: 'icmp-client/network-interface'
+    __widget: 'customize'
+    __value: ''
+    __datatype: 'interface_auto'
+    __options: []
+  destination-address:
+    __label: 'icmp-client/destination-address'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  source-address:
+    __label: 'icmp-client/source-address'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  size:
+    __label: 'icmp-client/size'
+    __widget: 'number_input'
+    __value: 8
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 65507
+      __step: 1000
+  interval:
+    __label: 'icmp-client/interval'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'int'
+    __options: []
+  count:
+    __label: 'icmp-client/count'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+  results:
+    __label: 'icmp-client/results'
+    __widget: 'text_input'
+    __value: '3'
+    __datatype: 'str'
+    __options: []
+  ttl:
+    __label: 'icmp-client/ttl'
+    __widget: 'text_input'
+    __value: '64'
+    __datatype: 'str'
+    __options: []
+  tos:
+    __label: 'icmp-client/tos'
+    __widget: 'text_input'
+    __value: 0
+    __datatype: 'int'
+    __options: []
+  df:
+    __label: 'icmp-client/df'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  autostart:
+    __label: 'icmp-client/autostart'
+    __widget: 'selectbox'
+    __value: false
+    __datatype: 'bool'
+    __options: [true,false]
+  start-delay:
+    __label: 'icmp-client/start-delay'
+    __widget: 'text_input'
+    __value: '0'
+    __datatype: 'int'
+    __options: []
+arp-client:
+  arp-client-group-id:
+    __label: 'arp-client/arp-client-group-id'
+    __widget: 'number_input'
+    __value: 1
+    __datatype: 'int'
+    __options:
+      __min: 1
+      __max: 65535
+      __step: 1000
+  target-ip:
+    __label: 'arp-client/target-ip'
+    __widget: 'text_input'
+    __value: '1.2.3.4'
+    __datatype: 'str'
+    __options: []
+  interval: 
+    __label: 'arp-client/interval'
+    __widget: 'text_input'
+    __value: '1'
+    __datatype: 'int'
+    __options: []
+  vlan-priority:
+    __label: 'arp-client/vlan-priority'
+    __widget: 'slider'
+    __value: 0
+    __datatype: 'int'
+    __options:
+      __min: 0
+      __max: 7
