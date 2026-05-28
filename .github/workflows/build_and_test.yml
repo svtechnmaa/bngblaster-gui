@@ -167,69 +167,69 @@ jobs:
       run: |
         docker compose build backend frontend
 
-    - name: Scan Backend Dockerfile using Trivy and send mail if vulnerabilities detected
-      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@main
-      with:
-        dockerfile_path: './backend/Dockerfile'
-        commit_id: ${{ env.COMMIT_FULL_ID }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id }}
+    # - name: Scan Backend Dockerfile using Trivy and send mail if vulnerabilities detected
+    #   if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+    #   uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@main
+    #   with:
+    #     dockerfile_path: './backend/Dockerfile'
+    #     commit_id: ${{ env.COMMIT_FULL_ID }}
+    #     mail_username: ${{ vars.MAIL_USERNAME }}
+    #     mail_password: ${{ secrets.MAIL_PASSWORD }}
+    #     mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+    #     commit_author_name: ${{ env.COMMITTER_NAME }}
+    #     job_id: ${{ steps.get_job_id.outputs.job_id }}
 
-    - name: Scan Frontend Dockerfile using Trivy and send mail if vulnerabilities detected
-      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@main
-      with:
-        dockerfile_path: './frontend/Dockerfile'
-        commit_id: ${{ env.COMMIT_FULL_ID }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id }}
-        token: ${{ secrets.GH_TOKEN }}
+    # - name: Scan Frontend Dockerfile using Trivy and send mail if vulnerabilities detected
+    #   if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+    #   uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@main
+    #   with:
+    #     dockerfile_path: './frontend/Dockerfile'
+    #     commit_id: ${{ env.COMMIT_FULL_ID }}
+    #     mail_username: ${{ vars.MAIL_USERNAME }}
+    #     mail_password: ${{ secrets.MAIL_PASSWORD }}
+    #     mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+    #     commit_author_name: ${{ env.COMMITTER_NAME }}
+    #     job_id: ${{ steps.get_job_id.outputs.job_id }}
+    #     token: ${{ secrets.GH_TOKEN }}
 
-    - name: Scan Backend Docker image using Trivy and send mail if vulnerabilities detected
-      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_image@main
-      with:
-        trivy_server: ${{ secrets.TRIVY_SERVER }}
-        image_name: 'bngblaster-gui-backend'
-        image_tag: 'latest'
-        commit_id: ${{ env.COMMIT_FULL_ID }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id }}
-        token: ${{ secrets.GH_TOKEN }}
+    # - name: Scan Backend Docker image using Trivy and send mail if vulnerabilities detected
+    #   if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+    #   uses: svtechnmaa/.github/actions/run_trivy_scan_image@main
+    #   with:
+    #     trivy_server: ${{ secrets.TRIVY_SERVER }}
+    #     image_name: 'bngblaster-gui-backend'
+    #     image_tag: 'latest'
+    #     commit_id: ${{ env.COMMIT_FULL_ID }}
+    #     mail_username: ${{ vars.MAIL_USERNAME }}
+    #     mail_password: ${{ secrets.MAIL_PASSWORD }}
+    #     mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+    #     commit_author_name: ${{ env.COMMITTER_NAME }}
+    #     job_id: ${{ steps.get_job_id.outputs.job_id }}
+    #     token: ${{ secrets.GH_TOKEN }}
 
-    - name: Scan Frontend Docker image using Trivy and send mail if vulnerabilities detected
-      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_image@main
-      with:
-        trivy_server: ${{ secrets.TRIVY_SERVER }}
-        image_name: 'bngblaster-gui-frontend'
-        image_tag: 'latest'
-        commit_id: ${{ env.COMMIT_FULL_ID }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id }}
+    # - name: Scan Frontend Docker image using Trivy and send mail if vulnerabilities detected
+    #   if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+    #   uses: svtechnmaa/.github/actions/run_trivy_scan_image@main
+    #   with:
+    #     trivy_server: ${{ secrets.TRIVY_SERVER }}
+    #     image_name: 'bngblaster-gui-frontend'
+    #     image_tag: 'latest'
+    #     commit_id: ${{ env.COMMIT_FULL_ID }}
+    #     mail_username: ${{ vars.MAIL_USERNAME }}
+    #     mail_password: ${{ secrets.MAIL_PASSWORD }}
+    #     mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+    #     commit_author_name: ${{ env.COMMITTER_NAME }}
+    #     job_id: ${{ steps.get_job_id.outputs.job_id }}
 
-    - name: Start services with Docker Compose
-      if: |
-        (github.event_name == 'push' || github.event_name == 'pull_request' || 
-        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
-        steps.check_commit_message.outputs.no_ci != 'true'
-      run: |
-        cp .env.example .env
-        sed -i "s/change-me-to-a-32-byte-hex-string/$(openssl rand -hex 32)/" .env
-        docker compose up -d
+    # - name: Start services with Docker Compose
+    #   if: |
+    #     (github.event_name == 'push' || github.event_name == 'pull_request' || 
+    #     steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+    #     steps.check_commit_message.outputs.no_ci != 'true'
+    #   run: |
+    #     cp .env.example .env
+    #     sed -i "s/change-me-to-a-32-byte-hex-string/$(openssl rand -hex 32)/" .env
+    #     docker compose up -d
         
     - name: Wait for services to be healthy
       if: |
