@@ -172,7 +172,7 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        docker compose build backend frontend
+        docker compose up -d
 
     # - name: Scan Backend Dockerfile using Trivy and send mail if vulnerabilities detected
     #   if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
