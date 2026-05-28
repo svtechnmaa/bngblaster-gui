@@ -73,29 +73,36 @@ jobs:
 
     ## Check existing image in GHCR to skip building if image with commit ID tag is existed
     - name: Check existing image in GHCR
-      if: steps.check_commit_message.outputs.no_ci != 'true'
       id: check_existing_image
       run: |
         REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
-        
-        IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$REPO_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
-        EXISTED_IMAGE=$(echo $IMAGES | jq -c 'select(.tags | contains(["${{ env.COMMIT_SHORT_ID }}"]))')
+        RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$REPO_NAME/versions")
 
-        if [[ -z $EXISTED_IMAGE ]]; then
+        if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
+          echo "Package '$REPO_NAME' not found"
           echo "is_image_tag_by_commit_id_existed=false" >> $GITHUB_OUTPUT
         else
-          FULL_TAGS=$(echo $EXISTED_IMAGE | jq -c '.tags')
-          if [[ $FULL_TAGS == *"latest"* || $FULL_TAGS =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then    
-            echo "is_latest_or_release_image=true" >> $GITHUB_OUTPUT
-            echo "is_latest_or_release_image=true"
-          else
-            echo "is_latest_or_release_image=false" >> $GITHUB_OUTPUT
-            echo "is_latest_or_release_image=false"
-          fi
+          IMAGES=$(echo $RESPONSE | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
-          echo "Image which has tag ${{ env.COMMIT_SHORT_ID }} is existed. The full tags are $FULL_TAGS. Skipping the rest of the build job..."
-          echo "is_image_tag_by_commit_id_existed=true" >> $GITHUB_OUTPUT
+          EXISTED_IMAGE=$(echo $IMAGES | jq -c 'select(.tags | contains(["${{ env.COMMIT_SHORT_ID }}"]))')
+
+          if [[ -z $EXISTED_IMAGE ]]; then
+            echo "Image with tag ${{ env.COMMIT_SHORT_ID }} has not in the ghcr yet."
+            echo "is_image_tag_by_commit_id_existed=false" >> $GITHUB_OUTPUT
+          else
+            FULL_TAGS=$(echo $EXISTED_IMAGE | jq -c '.tags')
+            if [[ $FULL_TAGS == *"latest"* || $FULL_TAGS =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then    
+              echo "is_latest_or_release_image=true" >> $GITHUB_OUTPUT
+              echo "is_latest_or_release_image=true"
+            else
+              echo "is_latest_or_release_image=false" >> $GITHUB_OUTPUT
+              echo "is_latest_or_release_image=false"
+            fi
+
+            echo "Image which has tag ${{ env.COMMIT_SHORT_ID }} is existed. The full tags are $FULL_TAGS. Skipping the rest of the build job..."
+            echo "is_image_tag_by_commit_id_existed=true" >> $GITHUB_OUTPUT
+          fi        
         fi
 
     - name: Get Job ID
