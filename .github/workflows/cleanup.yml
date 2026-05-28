@@ -1,0 +1,40 @@
+name: "Scheduled Cleanup GHCR (clean up images older than 7 days and not tagged with latest or vX.X.X)" 
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * 1' # Every Monday at 00:00
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-dind
+    steps:
+      - name: Downcase REPO
+        run: |
+          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+
+      - name: Delete GHCR Old Test Images 
+        run: |
+          REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
+                 
+          IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$REPO_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
+
+          echo $IMAGES | jq -c 'select(
+            ((.tags | contains(["latest"])) | not) and 
+            ((.tags | map(select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | length) == 0) and 
+            (.updated_at | fromdateiso8601 < now - 7*24*60*60) # older than 7 days
+          )' | while read -r json; do
+            id=$(echo $json | jq -r '.id')
+            tags=$(echo $json | jq -r '.tags | join(", ")') 
+            updated_at=$(echo $json | jq -r '.updated_at')
+            
+            echo "Processing ID: $id"
+            echo "Tags: $tags"
+            echo "Updated at: $updated_at"
+            
+            curl -i -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$REPO_NAME/versions/$id"
+            
+            echo "Deleted package version with ID: $id"
+            echo "-----------------------------------"
+            sleep 1 # Sleep for 1 second to avoid rate limiting
+          done
