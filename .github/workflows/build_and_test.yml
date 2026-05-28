@@ -40,7 +40,7 @@ jobs:
     steps:
       
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         ref: ${{ env.COMMIT_FULL_ID }}
 
@@ -244,7 +244,7 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        timeout 60 bash -c 'until curl -f http://localhost:8001/health > /dev/null 2>&1; do echo "Waiting for backend..."; sleep 2; done'
+        timeout 150 bash -c 'until curl -f http://localhost:8001/health > /dev/null 2>&1; do echo "Waiting for backend..."; sleep 2; done'
         echo "✅ Services are healthy"
         
     - name: Tag and push Backend image to GitHub Container Registry
