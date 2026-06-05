@@ -18,6 +18,7 @@ services:
     restart: unless-stopped
 
   backend:
+    image: backend:latest
     build: ./backend
     container_name: bngweb-backend
     depends_on:
@@ -43,6 +44,7 @@ services:
     restart: unless-stopped
 
   frontend:
+    image: frontend:latest
     build: ./frontend
     container_name: bngweb-frontend
     depends_on:
