@@ -1,0 +1,560 @@
+name: Build and Test bngblaster-gui app
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      commit_id:
+        description: 'Full commit ID to build (default: latest commit). e.g daae94a0f72a13f7092812fa42d684b2af827xxx. WARNING: release job will NOT run by this trigger'
+        type: string
+      run_test:
+        description: 'Run test'
+        default: true
+        type: boolean
+      keep_image: 
+        description: 'Keep image in GHCR even test fails'
+        type: boolean
+        default: false
+
+env:
+  IMAGE_TEST_TAG: ${{ format('test-v{0}', github.run_number) }}
+  COMMIT_FULL_ID: ${{ inputs.commit_id || github.sha }}
+
+jobs:
+  build:
+    runs-on: ubuntu-dind
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    outputs:
+      check_no_ci: ${{ steps.check_commit_message.outputs.no_ci }}
+      check_no_scan: ${{ steps.check_commit_message.outputs.no_scan }}
+      check_no_cache: ${{ steps.check_commit_message.outputs.no_cache }}
+      is_latest_or_release_image: ${{ steps.check_existing_image.outputs.is_latest_or_release_image }}
+    steps:
+      
+    - name: Checkout code
+      uses: actions/checkout@v5
+      with:
+        ref: ${{ env.COMMIT_FULL_ID }}
+
+    - name: Downcase REPO and shorten COMMIT ID
+      run: |
+        COMMIT_SHORT_ID=$(git rev-parse --short ${{ env.COMMIT_FULL_ID }})
+        echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}" >>${GITHUB_ENV}
+        echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+        echo "COMMIT_SHORT_ID=${{ env.COMMIT_SHORT_ID }}"
+        echo "REPO=${{ env.REPO }}"
+
+    ## Check commit message for no-ci, no-scan, no-cache
+    - name: Check commit message
+      id: check_commit_message
+      run: |
+        commit_message=$(git log --pretty=format:"%H %s %b" | grep "${{ env.COMMIT_FULL_ID }}" | sed 's,'${{ env.COMMIT_FULL_ID }}' ,,g')
+
+        if [[ "$commit_message" =~ .*"no-ci".* ]]; then
+            echo "❌ Found 'no-ci' in commit message. Stopping workflow!"
+            echo "no_ci=true" >> $GITHUB_OUTPUT
+
+        elif [[ "$commit_message" =~ .*"no-scan".* ]]; then
+            echo "🛑 Found 'no_scan' in commit message. Skipping image and Dockerfile scan!"
+            echo "no_scan=true" >> $GITHUB_OUTPUT
+            
+        elif [[ "$commit_message" =~ .*"no-cache".* ]]; then
+            echo "⚡ Found 'no_cache' in commit message. Skipping caching during image build!"
+            echo "no_cache=true" >> $GITHUB_OUTPUT
+        fi
+
+    ## Check existing image in GHCR to skip building if image with commit ID tag is existed
+    - name: Check existing image in GHCR
+      id: check_existing_image
+      run: |
+        REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
+        IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=true
+        IS_LATEST_OR_RELEASE_IMAGE=false
+
+        for IMAGE_NAME in backend frontend; do
+          PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
+          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
+
+          if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
+            echo "Package '$REPO_NAME/$IMAGE_NAME' not found"
+            IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
+            continue
+          fi
+
+          IMAGES=$(echo "$RESPONSE" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
+
+          EXISTED_IMAGE=$(echo $IMAGES | jq -c 'select(.tags | contains(["${{ env.COMMIT_SHORT_ID }}"]))')
+
+          if [[ -z $EXISTED_IMAGE ]]; then
+            echo "Image $IMAGE_NAME with tag ${{ env.COMMIT_SHORT_ID }} is not in GHCR yet."
+            IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
+          else
+            FULL_TAGS=$(echo $EXISTED_IMAGE | jq -c '.tags')
+            if [[ $FULL_TAGS == *"latest"* || $FULL_TAGS =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then    
+              IS_LATEST_OR_RELEASE_IMAGE=true
+            else
+              echo "$IMAGE_NAME is not latest or release image"
+            fi
+
+            echo "Image $IMAGE_NAME with tag ${{ env.COMMIT_SHORT_ID }} exists. The full tags are $FULL_TAGS."
+          fi
+        done
+
+        echo "is_latest_or_release_image=$IS_LATEST_OR_RELEASE_IMAGE" >> $GITHUB_OUTPUT
+        echo "is_latest_or_release_image=$IS_LATEST_OR_RELEASE_IMAGE"
+        echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED" >> $GITHUB_OUTPUT
+        echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED"
+    - name: Get Job ID
+      if: steps.check_commit_message.outputs.no_ci != 'true'
+      id: get_job_id
+      run: |
+        job_id=$(curl -s -H "Authorization: Bearer ${{ secrets.PUSH_TOKEN }}" \
+        "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
+        | jq --arg job "${{ github.job }}" '.jobs[] | select(.name==$job) | .id')
+
+        echo "job_id=$job_id" >> $GITHUB_OUTPUT
+
+    - name: Get Commit ID and Committer Info
+      run: |
+        COMMIT_ID=${{ env.COMMIT_FULL_ID }}
+
+        # Get committer info
+        echo "Getting committer info for commit ID: $COMMIT_ID"
+        COMMITTER_EMAIL=$(git show -s --format='%ce' $COMMIT_ID)
+        COMMITTER_NAME=$(git show -s --format='%cn' $COMMIT_ID)
+
+        # Get author info if committer email is noreply
+        if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
+          echo "Committer email is noreply, getting author info..."
+          COMMITTER_NAME=$(git show -s --format='%an' $COMMIT_ID)
+          COMMITTER_EMAIL=$(git show -s --format='%ae' $COMMIT_ID)
+        fi
+
+        # Fallback to github event info if still noreply
+        if [[ "$COMMITTER_EMAIL" == *noreply* ]]; then 
+          echo "Committer email is still noreply, using github event info..."
+          COMMITTER_NAME=${{ github.event.pusher.name || github.event.sender.login }}
+          COMMITTER_EMAIL=${{ github.event.pusher.email}}
+        fi
+
+        echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
+        echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
+        echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+        echo "COMMIT_ID: $COMMIT_ID"
+        echo "COMMITTER_NAME: $COMMITTER_NAME"
+        echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
+
+    - name: Login to Docker Container Registry
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') &&
+        (steps.check_commit_message.outputs.no_ci != 'true')
+      uses: docker/login-action@v3
+      with:
+        registry: docker.io
+        username: '${{ secrets.DOCKER_HUB_USERNAME }}'
+        password: '${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}'
+
+    - name: Login to GitHub Container Registry
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || 
+        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+        steps.check_commit_message.outputs.no_ci != 'true'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: '${{ github.repository_owner }}'
+        password: '${{ secrets.GITHUB_TOKEN }}'
+    - name: Build services with Docker Compose
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || 
+        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+        steps.check_commit_message.outputs.no_ci != 'true'
+      run: |
+        docker compose -f docker-compose.yml up -d
+    - name: Wait for services to be healthy
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || 
+        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+        steps.check_commit_message.outputs.no_ci != 'true'
+      run: |
+        fail_with_logs() {
+          docker compose -f docker-compose.yml ps
+          docker compose -f docker-compose.yml logs --no-color --tail=200
+          exit 1
+        }
+
+        EXITED_CONTAINERS=$(docker compose -f docker-compose.yml ps --all --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
+        if [[ -n "$EXITED_CONTAINERS" ]]; then
+          echo "Containers failed to stay running:"
+          echo "$EXITED_CONTAINERS"
+          fail_with_logs
+        fi
+
+        wait_for() {
+          local name=$1
+          local url=$2
+          local max_attempts=15
+          local interval=10
+
+          echo "⏳ Waiting for $name at $url..."
+          for i in $(seq 1 $max_attempts); do
+            if curl -fsS "$url" > /dev/null 2>&1; then
+              echo "✅ $name is healthy"
+              return 0
+            fi
+            echo "  attempt $i/$max_attempts — retrying in ${interval}s..."
+            sleep $interval
+          done
+
+          echo "❌ $name did not become healthy after $((max_attempts * interval))s"
+          fail_with_logs
+        }
+
+        wait_for "backend"  "http://localhost:8001/health"
+        wait_for "frontend" "http://localhost:3001"
+        EXITED_CONTAINERS=$(docker compose -f docker-compose.yml ps --all --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
+        if [[ -n "$EXITED_CONTAINERS" ]]; then
+          echo "Containers failed after health checks:"
+          echo "$EXITED_CONTAINERS"
+          fail_with_logs
+        fi
+
+    - name: Tag and push Backend image to GitHub Container Registry
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || 
+        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+        steps.check_commit_message.outputs.no_ci != 'true'
+      run: |
+        BACKEND_IMAGE_NAME="backend"
+        docker tag ${BACKEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag ${BACKEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+    - name: Tag and push Frontend image to GitHub Container Registry
+      if: |
+        (github.event_name == 'push' || github.event_name == 'pull_request' || 
+        steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
+        steps.check_commit_message.outputs.no_ci != 'true'
+      run: |
+        FRONTEND_IMAGE_NAME="frontend"
+        docker tag ${FRONTEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag ${FRONTEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+
+  # test:
+  #   if: |
+  #     needs.build.outputs.check_no_ci != 'true' &&
+  #     (github.event_name == 'push' ||
+  #     github.event_name == 'pull_request' ||
+  #     (github.event_name == 'workflow_dispatch' && inputs.run_test))
+  #   runs-on: robot-dind
+  #   needs: build
+  #   permissions:
+  #     contents: read
+  #     packages: write
+  #   steps:
+  #   - name: Checkout code
+  #     uses: actions/checkout@v5
+  #     with:
+  #       ref: ${{ env.COMMIT_FULL_ID }}
+
+  #   - name: Downcase REPO and shorten COMMIT ID
+  #     run: |
+  #       COMMIT_SHORT_ID=$(git rev-parse --short ${{ env.COMMIT_FULL_ID }})
+  #       echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}" >>${GITHUB_ENV}
+  #       echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+  #       echo "COMMIT_SHORT_ID=${{ env.COMMIT_SHORT_ID }}"
+  #       echo "REPO=${{ env.REPO }}"
+
+  #   - name: Login to GitHub Container Registry
+  #     uses: docker/login-action@v3
+  #     with:
+  #       registry: ghcr.io
+  #       username: '${{ github.repository_owner }}'
+  #       password: '${{ secrets.GITHUB_TOKEN }}'
+
+  #   - name: Pull Backend and Frontend images
+  #     run: |
+  #       for IMAGE_NAME in backend frontend; do
+  #         docker pull ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+  #         docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ${IMAGE_NAME}:latest
+  #       done
+
+  #   - name: Start services with Docker Compose
+  #     run: |
+  #       docker compose up -d --no-build
+
+  #   - name: Wait for services to be healthy
+  #     run: |
+  #       fail_with_logs() {
+  #         docker compose ps
+  #         docker compose logs --no-color --tail=200
+  #         exit 1
+  #       }
+
+  #       EXITED_CONTAINERS=$(docker compose ps --all --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
+  #       if [[ -n "$EXITED_CONTAINERS" ]]; then
+  #         echo "Containers failed to stay running:"
+  #         echo "$EXITED_CONTAINERS"
+  #         fail_with_logs
+  #       fi
+
+  #       wait_for() {
+  #         local name=$1
+  #         local url=$2
+  #         local max_attempts=15
+  #         local interval=10
+
+  #         echo "Waiting for $name at $url..."
+  #         for i in $(seq 1 $max_attempts); do
+  #           if curl -fsS "$url" > /dev/null 2>&1; then
+  #             echo "$name is healthy"
+  #             return 0
+  #           fi
+  #           echo "  attempt $i/$max_attempts - retrying in ${interval}s..."
+  #           sleep $interval
+  #         done
+
+  #         echo "$name did not become healthy after $((max_attempts * interval))s"
+  #         fail_with_logs
+  #       }
+
+  #       wait_for "backend"  "http://localhost:8001/health"
+  #       wait_for "frontend" "http://localhost:3001"
+  #       EXITED_CONTAINERS=$(docker compose ps --all --format json | jq -r 'select(.State == "exited" or .State == "dead") | .Name')
+  #       if [[ -n "$EXITED_CONTAINERS" ]]; then
+  #         echo "Containers failed after health checks:"
+  #         echo "$EXITED_CONTAINERS"
+  #         fail_with_logs
+  #       fi
+
+  #   - name: Run Robot Framework tests
+  #     run: |
+  #       echo "##[command]robot tests/"
+  #       robot tests/
+
+  #   - name: Delete package from GHCR if test fails
+  #     if: failure() && !inputs.keep_image
+  #     run: |
+  #       if [[ "${{ needs.build.outputs.is_latest_or_release_image }}" == "true" ]]; then
+  #         echo "Images with tag ${{ env.COMMIT_SHORT_ID }} must NOT be deleted as they are release or latest images."
+  #       else
+  #         echo "Robot test failed, deleting packages from GHCR..."
+  #         REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
+  #         for IMAGE_NAME in backend frontend; do
+  #           PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
+  #           VERSION_ID=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" | jq -r '.[] | select(.metadata.container.tags[] == "${{ env.COMMIT_SHORT_ID }}") | .id')
+  #           if [[ -n "$VERSION_ID" && "$VERSION_ID" != "null" ]]; then
+  #             echo "Deleting $IMAGE_NAME package version ID: $VERSION_ID"
+  #             curl -i -X DELETE -H 'Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' -H "Accept: application/vnd.github.v3+json" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions/$VERSION_ID"
+  #           fi
+  #         done
+  #       fi
+
+
+  #   - name: 'Upload robot test result'
+  #     if: always()
+  #     uses: actions/upload-artifact@v4.6.0
+  #     with:
+  #       name: robot-test-result-#${{ github.run_number }}
+  #       path: |
+  #         ./output.xml
+  #         ./log.html
+  #         ./report.html
+
+  release:
+    if: (github.event_name == 'push' || github.event_name == 'pull_request') && needs.build.outputs.check_no_ci != 'true'
+    needs:
+      - build
+    runs-on: ubuntu-dind
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v5
+    - name: Semantic Release
+      uses: cycjimmy/semantic-release-action@v4
+      id: semantic
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If permission denied for protected branch, use ${{ secrets.PUSH_TOKEN }} instead.
+    - name: No release published
+      if: ${{ steps.semantic.outputs.new_release_published == 'false' }}
+      run: |
+        echo "No release published, skipping the rest of the job..."
+    - name: Downcase REPO and shorten COMMIT ID
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+          COMMIT_SHORT_ID=$(git rev-parse --short ${{ env.COMMIT_FULL_ID }})
+          echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}" >>${GITHUB_ENV}
+          echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+          echo "COMMIT_SHORT_ID=${{ env.COMMIT_SHORT_ID }}"
+          echo "REPO=${{ env.REPO }}"
+
+    - name: Login to GitHub Container Registry
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: '${{ github.repository_owner }}'
+        password: '${{ secrets.GITHUB_TOKEN }}'
+
+    - name: Pull image from GitHub Container Registry
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        BACKEND_IMAGE_NAME="backend"
+        FRONTEND_IMAGE_NAME="frontend"
+        docker pull ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker pull ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+
+    - name: Delete package from GHCR after successful release
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        if [[ "${{ needs.build.outputs.is_latest_or_release_image }}" == "true" ]]; then
+          echo "Image with tag ${{ env.COMMIT_SHORT_ID }} must NOT be deleted as it is release or latest image."
+        else
+          echo "New release ${{ env.RELEASE_IMAGE_TAG }} was published, deleting images with tag ${{ env.COMMIT_SHORT_ID }} from GHCR..."
+          REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
+          for IMAGE_NAME in backend frontend; do
+            echo "Processing $IMAGE_NAME..."
+            PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
+            VERSION_ID=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" \
+              | jq -r '.[] | select(.metadata.container.tags[] == "${{ env.COMMIT_SHORT_ID }}") | .id')
+            echo "Package version ID for $IMAGE_NAME: $VERSION_ID"
+            curl -i -X DELETE \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions/$VERSION_ID"
+          done
+        fi
+      env:
+        RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+    - name: Push latest released image to GitHub Container Registry
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        for IMAGE_NAME in backend frontend; do
+          echo "Tagging and pushing $IMAGE_NAME..."
+          docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
+          docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:latest
+
+          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
+          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:latest
+        done
+      env:
+        RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+
+  #   - name: Install Helm
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: azure/setup-helm@v3
+  #     with:
+  #       version: 'latest'
+
+  #   - name: Setup Python
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: actions/setup-python@v5.3.0
+  #     with:
+  #       python-version: "3.13"
+    
+  #   - name: Clone charts Repository
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: '${{ github.repository_owner }}/charts'
+  #       ref: 'main'
+  #       token: ${{ secrets.PUSH_TOKEN }}
+  #       path: charts
+
+  #   - name: Clone stack_charts Repository
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: '${{ github.repository_owner }}/stacked_charts'
+  #       ref: 'master'
+  #       token: '${{ secrets.PUSH_TOKEN }}'
+  #       path: stacked_charts
+
+  #   - name: Clone SVTECH_CI_utilities Repository
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: actions/checkout@v4
+  #     with:
+  #       repository: '${{ github.repository_owner }}/SVTECH_CI_utilities'
+  #       ref: 'dev-jenkins'
+  #       token: '${{ secrets.PUSH_TOKEN }}'
+  #       path: SVTECH_CI_utilities
+
+  #   - name: Import GPG key
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     uses: crazy-max/ghaction-import-gpg@v6.2.0
+  #     with:
+  #       gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+  #       # git_user_signingkey: true
+  #       # git_commit_gpgsign: true
+    
+  #   - name: Modify image version in charts
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     run: |
+  #       sed -i '/^  repository: svtechnmaa\/bngblaster_web_client/{N;s/  tag: .*/  tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/}' charts/kubernetes/bngblaster/values.yaml
+  #     env:
+  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+
+  #   - name: Modify image version in stack_charts
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     run: |
+  #       pip install requests pyyaml
+  #       python3 SVTECH_CI_utilities/auto_testing/python_script/public_helmchart_release.py --BUILD_VARS_PATH='.' --ID='.' --GITHUB_TOKEN=${{secrets.PUSH_TOKEN}} --OWNER=${{ github.repository_owner}} --charts_string=bngblaster --REPO=charts
+
+  #   - name: Update image version in charts
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     env:
+  #       GIT_USER_NAME: "svtechnmaa"
+  #       GIT_USER_EMAIL: "nmaa@svtech.com.vn"
+  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+  #     run: |
+  #       cd charts
+  #       helm repo index artifacthub
+
+  #       if [[ `git diff --name-only` ]]; then  
+  #         git config user.name "${{ env.GIT_USER_NAME }}"
+  #         git config user.email "${{ env.GIT_USER_EMAIL }}"
+  #         git config commit.gpgSign true
+  #         git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+
+  #         git add .
+  #         git commit --no-verify -m "no-ci: Update BNGBlaster image version to ${{ env.RELEASE_IMAGE_TAG }}"
+  #         # git remote set-url origin https://svtechnmaa:${{secrets.PUSH_TOKEN}}@github.com/svtechnmaa/charts.git
+  #         git push origin main
+  #       else 
+  #         echo "No changes to commit" 
+  #       fi
+    
+  #   - name: Update image version in stack_charts
+  #     if: steps.semantic.outputs.new_release_published == 'true'
+  #     env:
+  #       GIT_USER_NAME: "svtechnmaa"
+  #       GIT_USER_EMAIL: "nmaa@svtech.com.vn"
+  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+
+  #     run: |
+  #       cd stacked_charts
+  #       if [[ `git diff --name-only` ]]; then 
+
+  #         git config user.name "${{ env.GIT_USER_NAME }}"
+  #         git config user.email "${{ env.GIT_USER_EMAIL }}"
+  #         git config commit.gpgSign true
+  #         git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+
+  #         git add .
+  #         git commit -S -m "no-ci: Update BNGBlaster image version to ${{ env.RELEASE_IMAGE_TAG }}"
+  #         # git remote set-url origin https://svtechnmaa:${{secrets.PUSH_TOKEN}}@github.com/svtechnmaa/stacked_charts.git
+  #         git push origin master
+  #       else
+  #         echo "No changes to commit"
+  #       fi
