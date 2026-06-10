@@ -100,10 +100,11 @@ def _issue_redirect(user: User) -> RedirectResponse:
     token = create_access_token(data={"sub": user.username, "role": user.role})
     user_data = UserResponse.model_validate(user).model_dump()
     # Encode user info as query param so the SPA can bootstrap auth state
+    import json
     params = urllib.parse.urlencode(
         {
             "token": token,
-            "user": urllib.parse.quote_plus(__import__("json").dumps(user_data, default=str)),
+            "user": json.dumps(user_data, default=str),
         }
     )
     return RedirectResponse(url=f"{_s.FRONTEND_URL}/oauth-callback?{params}")
