@@ -15,10 +15,8 @@ jobs:
 
       - name: Delete GHCR Old Test Images 
         run: |
-          REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
-
           for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
-            PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
+            PACKAGE_NAME="${IMAGE_NAME}"
             IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
             echo $IMAGES | jq -c 'select(
