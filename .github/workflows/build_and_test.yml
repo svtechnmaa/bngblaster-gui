@@ -79,7 +79,7 @@ jobs:
         IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=true
         IS_LATEST_OR_RELEASE_IMAGE=false
 
-        for IMAGE_NAME in backend frontend; do
+        for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
           PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
           RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
 
@@ -233,9 +233,9 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        BACKEND_IMAGE_NAME="backend"
-        docker tag ${BACKEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag ${BACKEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        BACKEND_IMAGE_NAME="bngblaster-gui-backend"
+        docker tag backend:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag backend:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
         docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
         docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
     - name: Tag and push Frontend image to GitHub Container Registry
@@ -244,9 +244,9 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        FRONTEND_IMAGE_NAME="frontend"
-        docker tag ${FRONTEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag ${FRONTEND_IMAGE_NAME}:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
+        docker tag frontend:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag frontend:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
         docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
         docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
 
@@ -408,8 +408,8 @@ jobs:
     - name: Pull image from GitHub Container Registry
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
-        BACKEND_IMAGE_NAME="backend"
-        FRONTEND_IMAGE_NAME="frontend"
+        BACKEND_IMAGE_NAME="bngblaster-gui-backend"
+        FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
         docker pull ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
         docker pull ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
 
@@ -421,7 +421,7 @@ jobs:
         else
           echo "New release ${{ env.RELEASE_IMAGE_TAG }} was published, deleting images with tag ${{ env.COMMIT_SHORT_ID }} from GHCR..."
           REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
-          for IMAGE_NAME in backend frontend; do
+          for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
             echo "Processing $IMAGE_NAME..."
             PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
             VERSION_ID=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -439,7 +439,7 @@ jobs:
     - name: Push latest released image to GitHub Container Registry
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
-        for IMAGE_NAME in backend frontend; do
+        for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
           echo "Tagging and pushing $IMAGE_NAME..."
           docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
           docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:latest
