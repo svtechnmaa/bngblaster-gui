@@ -17,7 +17,7 @@ jobs:
         run: |
           for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
             PACKAGE_NAME="${IMAGE_NAME}"
-            IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
+            IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
             echo $IMAGES | jq -c 'select(
               ((.tags | contains(["latest"])) | not) and
@@ -32,7 +32,7 @@ jobs:
               echo "Tags: $tags"
               echo "Updated at: $updated_at"
 
-              curl -i -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions/$id"
+              curl -i -X DELETE -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" -H "Accept: application/vnd.github.v3+json" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions/$id"
 
               echo "Deleted $IMAGE_NAME package version with ID: $id"
               echo "-----------------------------------"

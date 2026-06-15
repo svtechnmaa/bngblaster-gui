@@ -80,10 +80,10 @@ jobs:
 
         for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
           PACKAGE_NAME="${IMAGE_NAME}"
-          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
+          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
 
           if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
-            echo "Package '$REPO_NAME/$IMAGE_NAME' not found"
+            echo "Package '$IMAGE_NAME' not found"
             IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
             continue
           fi
