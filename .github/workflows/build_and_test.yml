@@ -75,16 +75,15 @@ jobs:
     - name: Check existing image in GHCR
       id: check_existing_image
       run: |
-        REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
         IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=true
         IS_LATEST_OR_RELEASE_IMAGE=false
 
         for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
-          PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
-          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/users/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
+          PACKAGE_NAME="${IMAGE_NAME}"
+          RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
 
           if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
-            echo "Package '$REPO_NAME/$IMAGE_NAME' not found"
+            echo "Package '$IMAGE_NAME' not found"
             IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
             continue
           fi
@@ -234,10 +233,10 @@ jobs:
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
         BACKEND_IMAGE_NAME="bngblaster-gui-backend"
-        docker tag backend:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag backend:latest ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-        docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker push ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker tag backend:latest ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag backend:latest ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker push ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
     - name: Tag and push Frontend image to GitHub Container Registry
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
@@ -245,10 +244,10 @@ jobs:
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
         FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
-        docker tag frontend:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag frontend:latest ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-        docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker push ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
+        docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
 
   # test:
   #   if: |
@@ -410,8 +409,8 @@ jobs:
       run: |
         BACKEND_IMAGE_NAME="bngblaster-gui-backend"
         FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
-        docker pull ghcr.io/${{ env.REPO }}/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-        docker pull ghcr.io/${{ env.REPO }}/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker pull ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker pull ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
 
     - name: Delete package from GHCR after successful release
       if: steps.semantic.outputs.new_release_published == 'true'
@@ -420,10 +419,9 @@ jobs:
           echo "Image with tag ${{ env.COMMIT_SHORT_ID }} must NOT be deleted as it is release or latest image."
         else
           echo "New release ${{ env.RELEASE_IMAGE_TAG }} was published, deleting images with tag ${{ env.COMMIT_SHORT_ID }} from GHCR..."
-          REPO_NAME=$(echo ${{ env.REPO }} | cut -d'/' -f2)
           for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
             echo "Processing $IMAGE_NAME..."
-            PACKAGE_NAME="${REPO_NAME}%2F${IMAGE_NAME}"
+            PACKAGE_NAME="${IMAGE_NAME}"
             VERSION_ID=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" \
               | jq -r '.[] | select(.metadata.container.tags[] == "${{ env.COMMIT_SHORT_ID }}") | .id')
@@ -441,12 +439,12 @@ jobs:
       run: |
         for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
           echo "Tagging and pushing $IMAGE_NAME..."
-          docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
-          docker tag ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:latest
+          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
+          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/svtechnmaa/${IMAGE_NAME}:latest
 
-          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
-          docker push ghcr.io/${{ env.REPO }}/${IMAGE_NAME}:latest
+          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
+          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:latest
         done
       env:
         RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
