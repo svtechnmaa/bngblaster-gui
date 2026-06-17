@@ -3,8 +3,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
 
+const basePath = window.location.pathname.startsWith('/bngblaster-gui') ? '/bngblaster-gui' : '';
+
 const api = axios.create({
-    baseURL: '/api/v1',
+    baseURL: `${basePath}/api/v1`,
     headers: { 'Content-Type': 'application/json' },
 });
 
@@ -19,7 +21,7 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             useAuthStore.getState().logout();
-            window.location.href = '/login';
+            window.location.href = `${basePath}/login`;
         }
         return Promise.reject(error);
     },
