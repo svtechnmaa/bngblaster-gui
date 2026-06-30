@@ -7,7 +7,9 @@
  * router basename, fall back to `'/'` (see `getRouterBasename`).
  */
 export function getBasePath(): string {
-    return window.location.pathname.startsWith('/bngblaster-gui') ? '/bngblaster-gui' : '';
+    const { pathname } = window.location;
+    const isBase = pathname === '/bngblaster-gui' || pathname.startsWith('/bngblaster-gui/');
+    return isBase ? '/bngblaster-gui' : '';
 }
 
 /** Router basename variant: same detection, but root resolves to `'/'`. */
