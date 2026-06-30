@@ -5,12 +5,11 @@ import { Toaster } from 'sonner';
 
 import App from './App';
 import './styles/index.css';
-
-const basePath = window.location.pathname.startsWith('/bngblaster-gui') ? '/bngblaster-gui' : '/';
+import { getRouterBasename } from './utils/basePath';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <BrowserRouter basename={basePath}>
+        <BrowserRouter basename={getRouterBasename()}>
             <App />
             <Toaster position="top-right" richColors />
         </BrowserRouter>

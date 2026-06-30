@@ -2,8 +2,9 @@
 
 import axios from 'axios';
 import { useAuthStore } from '../store/useAuthStore';
+import { getBasePath } from '../utils/basePath';
 
-const basePath = window.location.pathname.startsWith('/bngblaster-gui') ? '/bngblaster-gui' : '';
+const basePath = getBasePath();
 
 const api = axios.create({
     baseURL: `${basePath}/api/v1`,
