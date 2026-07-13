@@ -28,7 +28,7 @@ function Stat({ label, value, unit, tone, className = '' }: { label: string; val
         ? 'text-cyan-600 dark:text-cyan-400'
         : 'text-[var(--text-primary)]';
     return (
-        <span className={`items-baseline gap-1 ${className}`}>
+        <span className={`items-baseline gap-1 whitespace-nowrap shrink-0 ${className}`}>
             <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</span>
             <span className={`font-mono tabular-nums text-xs font-semibold ${color}`}>{value}{unit && <span className="text-[9px] font-medium text-[var(--text-muted)] ml-0.5">{unit}</span>}</span>
         </span>
@@ -49,7 +49,7 @@ export default function InstrumentRail() {
             {/* Controller link — LED always visible; name from sm up */}
             <span className="flex items-center gap-1.5 min-w-0" title={t.server ? `${t.server.host}:${t.server.port}` : 'No server selected'}>
                 <span className={`w-2 h-2 rounded-full shrink-0 ${t.server ? 'bg-emerald-500 shadow-[0_0_6px_1px_rgba(16,185,129,0.7)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                <span className="hidden sm:inline font-mono text-xs text-[var(--text-primary)] truncate">{t.server ? t.server.name : 'No server'}</span>
+                <span className="hidden sm:block min-w-0 max-w-[10rem] font-mono text-xs text-[var(--text-primary)] truncate">{t.server ? t.server.name : 'No server'}</span>
                 {t.server && <span className="hidden md:inline font-mono text-[10px] text-[var(--text-muted)] shrink-0">:{t.server.port}</span>}
             </span>
 
@@ -59,13 +59,13 @@ export default function InstrumentRail() {
             {t.hasLive && <Stat className="hidden xl:flex" label="TX" value={fmtPps(t.txPps)} unit="pps" tone="tx" />}
             {t.hasLive && <Stat className="hidden xl:flex" label="Flows" value={t.streams.toLocaleString()} />}
             {t.hasLive && (
-                <span className="hidden md:flex items-baseline gap-1">
+                <span className="hidden md:flex items-baseline gap-1 whitespace-nowrap shrink-0">
                     <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Loss</span>
                     <span className={`font-mono tabular-nums text-xs font-semibold ${t.loss > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>{t.loss.toLocaleString()}</span>
                 </span>
             )}
 
-            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-[0.14em] border ${
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-[0.14em] border whitespace-nowrap shrink-0 ${
                 idle
                     ? 'bg-slate-400/12 text-slate-500 dark:text-slate-300 border-slate-400/25'
                     : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/40'
