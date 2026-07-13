@@ -27,5 +27,6 @@ class BNGConfig(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     config_json = Column(JSON, nullable=False, default=dict)
+    tags = Column(JSON, nullable=False, default=list)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
