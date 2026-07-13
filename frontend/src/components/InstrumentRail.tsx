@@ -14,7 +14,14 @@ function fmtPps(n: number) {
     return String(n);
 }
 
-function Stat({ label, value, tone, className = '' }: { label: string; value: string; tone?: 'tx' | 'rx'; className?: string }) {
+function fmtBps(n: number) {
+    if (n >= 1e9) return `${(n / 1e9).toFixed(2)}G`;
+    if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+    if (n >= 1e3) return `${(n / 1e3).toFixed(1)}k`;
+    return String(n);
+}
+
+function Stat({ label, value, unit, tone, className = '' }: { label: string; value: string; unit?: string; tone?: 'tx' | 'rx'; className?: string }) {
     const color = tone === 'tx'
         ? 'text-orange-600 dark:text-orange-400'
         : tone === 'rx'
@@ -23,7 +30,7 @@ function Stat({ label, value, tone, className = '' }: { label: string; value: st
     return (
         <span className={`items-baseline gap-1 ${className}`}>
             <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</span>
-            <span className={`font-mono tabular-nums text-xs font-semibold ${color}`}>{value}</span>
+            <span className={`font-mono tabular-nums text-xs font-semibold ${color}`}>{value}{unit && <span className="text-[9px] font-medium text-[var(--text-muted)] ml-0.5">{unit}</span>}</span>
         </span>
     );
 }
@@ -47,8 +54,16 @@ export default function InstrumentRail() {
             </span>
 
             <Stat className="hidden sm:flex" label="Inst" value={`${t.running}/${t.total}`} />
-            {t.hasLive && <Stat className="hidden lg:flex" label="TX" value={fmtPps(t.txPps)} tone="tx" />}
-            {t.hasLive && <Stat className="hidden lg:flex" label="RX" value={fmtPps(t.rxPps)} tone="rx" />}
+            {t.hasLive && <Stat className="hidden lg:flex" label="TX" value={fmtBps(t.txBps)} unit="bps" tone="tx" />}
+            {t.hasLive && <Stat className="hidden lg:flex" label="RX" value={fmtBps(t.rxBps)} unit="bps" tone="rx" />}
+            {t.hasLive && <Stat className="hidden xl:flex" label="TX" value={fmtPps(t.txPps)} unit="pps" tone="tx" />}
+            {t.hasLive && <Stat className="hidden xl:flex" label="Flows" value={t.streams.toLocaleString()} />}
+            {t.hasLive && (
+                <span className="hidden md:flex items-baseline gap-1">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">Loss</span>
+                    <span className={`font-mono tabular-nums text-xs font-semibold ${t.loss > 0 ? 'text-red-500' : 'text-emerald-600 dark:text-emerald-400'}`}>{t.loss.toLocaleString()}</span>
+                </span>
+            )}
 
             <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] ${idle ? 'text-[var(--text-muted)]' : 'text-emerald-600 dark:text-emerald-400'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-500 motion-safe:animate-pulse'}`} />

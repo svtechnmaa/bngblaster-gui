@@ -280,11 +280,15 @@ export default function BNGBlasterPage() {
         const hasLive = monitoring && netStats.length > 0;
         const txPps = hasLive ? netStats.reduce((a, i) => a + (i['tx-pps'] || 0), 0) : 0;
         const rxPps = hasLive ? netStats.reduce((a, i) => a + (i['rx-pps'] || 0), 0) : 0;
+        const txBps = hasLive ? streamStats.reduce((a, s) => a + (s['tx-bps-l2'] || 0), 0) : 0;
+        const rxBps = hasLive ? streamStats.reduce((a, s) => a + (s['rx-bps-l2'] || 0), 0) : 0;
+        const loss = hasLive ? streamStats.reduce((a, s) => a + (s['rx-loss'] || 0), 0) : 0;
         setTelemetry({
             server: selServer ? { name: selServer.name, host: selServer.host, port: selServer.port } : null,
-            total: allInstances.length, running, monitoring, txPps, rxPps, hasLive,
+            total: allInstances.length, running, monitoring,
+            txPps, rxPps, txBps, rxBps, loss, streams: streamStats.length, hasLive,
         });
-    }, [selServer, allInstances, monitoring, netStats, setTelemetry]);
+    }, [selServer, allInstances, monitoring, netStats, streamStats, setTelemetry]);
     useEffect(() => () => resetTelemetry(), [resetTelemetry]);
 
     // ── Load servers + configs + settings on mount ────────────────────────
