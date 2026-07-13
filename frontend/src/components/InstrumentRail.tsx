@@ -46,14 +46,14 @@ export default function InstrumentRail() {
             aria-label={`Controller ${t.server ? t.server.name : 'none'}, ${t.running} of ${t.total} instances running, ${state}`}
             className="flex items-center gap-3 min-w-0"
         >
-            {/* Controller link + name */}
-            <span className="hidden md:flex items-center gap-1.5 min-w-0" title={t.server ? `${t.server.host}:${t.server.port}` : 'No server selected'}>
+            {/* Controller link — LED always visible; name from sm up */}
+            <span className="flex items-center gap-1.5 min-w-0" title={t.server ? `${t.server.host}:${t.server.port}` : 'No server selected'}>
                 <span className={`w-2 h-2 rounded-full shrink-0 ${t.server ? 'bg-emerald-500 shadow-[0_0_6px_1px_rgba(16,185,129,0.7)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
-                <span className="font-mono text-xs text-[var(--text-primary)] truncate">{t.server ? t.server.name : '—'}</span>
-                {t.server && <span className="font-mono text-[10px] text-[var(--text-muted)] shrink-0">:{t.server.port}</span>}
+                <span className="hidden sm:inline font-mono text-xs text-[var(--text-primary)] truncate">{t.server ? t.server.name : 'No server'}</span>
+                {t.server && <span className="hidden md:inline font-mono text-[10px] text-[var(--text-muted)] shrink-0">:{t.server.port}</span>}
             </span>
 
-            <Stat className="hidden sm:flex" label="Inst" value={`${t.running}/${t.total}`} />
+            <Stat className="flex" label="Inst" value={`${t.running}/${t.total}`} />
             {t.hasLive && <Stat className="hidden lg:flex" label="TX" value={fmtBps(t.txBps)} unit="bps" tone="tx" />}
             {t.hasLive && <Stat className="hidden lg:flex" label="RX" value={fmtBps(t.rxBps)} unit="bps" tone="rx" />}
             {t.hasLive && <Stat className="hidden xl:flex" label="TX" value={fmtPps(t.txPps)} unit="pps" tone="tx" />}
@@ -65,7 +65,11 @@ export default function InstrumentRail() {
                 </span>
             )}
 
-            <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] ${idle ? 'text-[var(--text-muted)]' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-[0.14em] border ${
+                idle
+                    ? 'bg-slate-400/12 text-slate-500 dark:text-slate-300 border-slate-400/25'
+                    : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/40'
+            }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-500 motion-safe:animate-pulse'}`} />
                 {state}
             </span>
