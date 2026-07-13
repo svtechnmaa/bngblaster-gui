@@ -192,6 +192,8 @@ export default function BNGBlasterPage() {
     const [cfgSubTab, setCfgSubTab] = useState<'editor' | 'builder'>('editor');
     const [savedCfgSearch, setSavedCfgSearch] = useState('');
     const [savedCfgFilter, setSavedCfgFilter] = useState<'all' | 'running' | 'idle'>('all');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [ownerFilter, setOwnerFilter] = useState<string>('all'); // 'all' | 'mine' | <username>
     const [configs, setConfigs] = useState<BNGConfig[]>([]);
     const [editingCfg, setEditingCfg] = useState<BNGConfig | null>(null);
     const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
@@ -1008,6 +1010,9 @@ export default function BNGBlasterPage() {
     };
 
     const allCfgTags = Array.from(new Set(configs.flatMap(c => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
+    const allOwners = Array.from(new Set(configs.map(c => c.owner_username).filter(Boolean) as string[])).sort();
+    const tagHue = (t: string) => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; };
+    const toggleTag = (t: string) => setSelectedTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
@@ -1482,6 +1487,41 @@ export default function BNGBlasterPage() {
                                                 placeholder="Search…"
                                                 className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                             />
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={ownerFilter}
+                                                    onChange={e => setOwnerFilter(e.target.value)}
+                                                    className="input-field text-xs py-1 flex-1"
+                                                    aria-label="Filter by owner"
+                                                >
+                                                    <option value="all">All owners</option>
+                                                    <option value="mine">Mine</option>
+                                                    {allOwners.map(o => <option key={o} value={o}>@{o}</option>)}
+                                                </select>
+                                            </div>
+                                            {allCfgTags.length > 0 && (
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    {allCfgTags.map(t => {
+                                                        const on = selectedTags.includes(t);
+                                                        const hue = tagHue(t);
+                                                        return (
+                                                            <button
+                                                                key={t}
+                                                                type="button"
+                                                                aria-pressed={on}
+                                                                onClick={() => toggleTag(t)}
+                                                                className="text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors cursor-pointer"
+                                                                style={on
+                                                                    ? { background: `hsl(${hue} 65% 45%)`, color: '#fff', borderColor: `hsl(${hue} 65% 45%)` }
+                                                                    : { background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 55% 45%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                            >{t}</button>
+                                                        );
+                                                    })}
+                                                    {selectedTags.length > 0 && (
+                                                        <button type="button" onClick={() => setSelectedTags([])} className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] underline cursor-pointer">Clear tags</button>
+                                                    )}
+                                                </div>
+                                            )}
                                             {(() => {
                                                 const visible = configs.filter(c => {
                                                     const instName = toInstanceName(c.name);
@@ -1489,6 +1529,9 @@ export default function BNGBlasterPage() {
                                                     const isRunning = inst?.status === 'started';
                                                     if (savedCfgFilter === 'running' && !isRunning) return false;
                                                     if (savedCfgFilter === 'idle' && isRunning) return false;
+                                                    if (ownerFilter === 'mine' && c.is_owner === false) return false;
+                                                    if (ownerFilter !== 'all' && ownerFilter !== 'mine' && c.owner_username !== ownerFilter) return false;
+                                                    if (selectedTags.length && !selectedTags.some(t => (c.tags ?? []).includes(t))) return false;
                                                     const q = savedCfgSearch.toLowerCase().trim();
                                                     return !q || c.name.toLowerCase().includes(q) || (c.description ?? '').toLowerCase().includes(q);
                                                 });
@@ -1571,6 +1614,23 @@ export default function BNGBlasterPage() {
                                                                                 )}
                                                                             </div>
                                                                             {c.description && <p className="text-xs text-[var(--text-muted)] truncate">{c.description}</p>}
+                                                                            {(c.tags ?? []).length > 0 && (
+                                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                                    {(c.tags ?? []).map(t => {
+                                                                                        const hue = tagHue(t);
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={t}
+                                                                                                type="button"
+                                                                                                onClick={e => { e.stopPropagation(); toggleTag(t); }}
+                                                                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border cursor-pointer"
+                                                                                                style={{ background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 55% 45%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                                                                title={`Filter by tag ${t}`}
+                                                                                            >{t}</button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            )}
                                                                             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                                                                 {c.updated_at ? new Date(c.updated_at).toLocaleString() : '—'}
                                                                             </p>
