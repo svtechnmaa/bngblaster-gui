@@ -109,7 +109,7 @@ function Tab({ active, onClick, icon: Icon, label, badge }: { active: boolean; o
             role="tab"
             aria-selected={active}
             onClick={onClick}
-            className={`group relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer
+            className={`group relative flex flex-1 items-center justify-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer
                 transition-all duration-200 motion-reduce:transition-none
                 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${
                 active
@@ -1111,6 +1111,8 @@ export default function BNGBlasterPage() {
                                             />
                                             <button
                                                 type="button"
+                                                aria-label={showCredPass ? 'Hide password' : 'Show password'}
+                                                title={showCredPass ? 'Hide password' : 'Show password'}
                                                 onClick={() => setShowCredPass(v => !v)}
                                                 className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
                                             >
@@ -1356,7 +1358,7 @@ export default function BNGBlasterPage() {
                                                     </pre>
                                                 )}
                                             </div>
-                                            <button onClick={() => setCleanupResult(null)} className="shrink-0 opacity-50 hover:opacity-100">✕</button>
+                                            <button onClick={() => setCleanupResult(null)} aria-label="Dismiss" title="Dismiss" className="shrink-0 opacity-50 hover:opacity-100">✕</button>
                                         </div>
                                     )}
                                 </div>
@@ -1368,16 +1370,20 @@ export default function BNGBlasterPage() {
                     {tab === 'configs' && (
                         <div className="space-y-4">
                             {/* Sub-tab bar: Editor | Builder */}
-                            <div className="flex border-b border-[var(--border-color)] gap-1">
+                            <div role="tablist" aria-label="Config editing mode" className="flex border-b border-[var(--border-color)] gap-1">
                                 <button
+                                    role="tab"
+                                    aria-selected={cfgSubTab === 'editor'}
                                     onClick={() => setCfgSubTab('editor')}
-                                    className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${cfgSubTab === 'editor' ? 'border-orange-500 text-orange-600' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                                    className={`px-4 py-2 text-xs font-medium border-b-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${cfgSubTab === 'editor' ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 >
                                     JSON Editor
                                 </button>
                                 <button
+                                    role="tab"
+                                    aria-selected={cfgSubTab === 'builder'}
                                     onClick={() => setCfgSubTab('builder')}
-                                    className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${cfgSubTab === 'builder' ? 'border-orange-500 text-orange-600' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
+                                    className={`px-4 py-2 text-xs font-medium border-b-2 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${cfgSubTab === 'builder' ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400' : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)]'}`}
                                 >
                                     Visual Builder
                                 </button>
@@ -1387,13 +1393,13 @@ export default function BNGBlasterPage() {
                             {cfgSubTab === 'editor' && (
                                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
                                     {/* ── Saved Configs panel ── */}
-                                    <div className="lg:col-span-2 glass-card border-t-2 border-t-indigo-500 overflow-hidden">
+                                    <div className="lg:col-span-2 glass-card border-t-2 border-t-cyan-500 overflow-hidden">
                                         {/* Panel header */}
-                                        <div className="flex items-center justify-between px-3 py-2.5 bg-indigo-500/10 border-b border-indigo-500/20">
+                                        <div className="flex items-center justify-between px-3 py-2.5 bg-cyan-500/10 border-b border-cyan-500/20">
                                             <div className="flex items-center gap-2">
-                                                <ClipboardDocumentListIcon className="w-4 h-4 text-indigo-500 shrink-0" />
-                                                <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">Saved Configs</span>
-                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 font-semibold">{configs.length}</span>
+                                                <ClipboardDocumentListIcon className="w-4 h-4 text-cyan-500 shrink-0" />
+                                                <span className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">Saved Configs</span>
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-300 font-semibold">{configs.length}</span>
                                             </div>
                                             <div className="flex items-center gap-1.5">
                                                 <button
@@ -1432,8 +1438,8 @@ export default function BNGBlasterPage() {
                                         <div className="p-3 space-y-2">
                                             <div className="flex rounded-lg border border-[var(--border-color)] overflow-hidden text-[11px] font-semibold">
                                                 {([['all', 'All'], ['running', 'Running'], ['idle', 'Idle']] as const).map(([f, label]) => (
-                                                    <button key={f} onClick={() => setSavedCfgFilter(f)}
-                                                        className={`flex-1 py-1 transition-colors ${savedCfgFilter === f ? 'bg-indigo-500 text-white' : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'}`}>
+                                                    <button key={f} aria-pressed={savedCfgFilter === f} onClick={() => setSavedCfgFilter(f)}
+                                                        className={`flex-1 py-1 transition-colors ${savedCfgFilter === f ? 'bg-cyan-500 text-white' : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'}`}>
                                                         {label}
                                                     </button>
                                                 ))}
@@ -1441,7 +1447,7 @@ export default function BNGBlasterPage() {
                                             <input
                                                 type="text" value={savedCfgSearch} onChange={e => setSavedCfgSearch(e.target.value)}
                                                 placeholder="Search…"
-                                                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                                className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                             />
                                             {(() => {
                                                 const visible = configs.filter(c => {
@@ -1472,13 +1478,13 @@ export default function BNGBlasterPage() {
                                                                         else visibleIds.forEach(id => next.add(id));
                                                                         return next;
                                                                     })}
-                                                                    className="rounded border-[var(--border-color)] text-indigo-500 focus:ring-indigo-400"
+                                                                    className="rounded border-[var(--border-color)] text-cyan-500 focus:ring-cyan-400"
                                                                 />
                                                                 Select all
                                                             </label>
                                                             {selCount > 0 && (
                                                                 <>
-                                                                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">{selCount} selected</span>
+                                                                    <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">{selCount} selected</span>
                                                                     <div className="flex-1" />
                                                                     <button onClick={handleBulkDownload} className="btn-secondary text-xs" title="Download each selected config (.json)">
                                                                         <ArrowDownTrayIcon className="w-3 h-3" />Download
@@ -1502,7 +1508,15 @@ export default function BNGBlasterPage() {
                                                             return (
                                                                 <div key={c.id}
                                                                     onClick={() => canEdit && startEditConfig(c)}
-                                                                    className={`rounded-lg border p-3 transition-all ${canEdit ? 'cursor-pointer hover:border-indigo-400 hover:bg-indigo-500/5' : 'cursor-default'} ${editingCfg?.id === c.id ? 'border-indigo-500 bg-indigo-500/10 shadow-sm' : 'border-[var(--border-color)] bg-[var(--bg-card)]'} ${selectedCfgIds.has(c.id) ? 'ring-1 ring-indigo-400' : ''}`}>
+                                                                    {...(canEdit ? {
+                                                                        role: 'button',
+                                                                        tabIndex: 0,
+                                                                        'aria-label': `Edit config ${c.name}`,
+                                                                        onKeyDown: (e: React.KeyboardEvent) => {
+                                                                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditConfig(c); }
+                                                                        },
+                                                                    } : {})}
+                                                                    className={`rounded-lg border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${canEdit ? 'cursor-pointer hover:border-cyan-400 hover:bg-cyan-500/5' : 'cursor-default'} ${editingCfg?.id === c.id ? 'border-orange-500 bg-orange-500/10 shadow-sm' : 'border-[var(--border-color)] bg-[var(--bg-card)]'} ${selectedCfgIds.has(c.id) ? 'ring-1 ring-cyan-400' : ''}`}>
                                                                     <div className="flex items-start justify-between gap-2">
                                                                         <div className="flex items-start gap-2 min-w-0">
                                                                             <input
@@ -1510,7 +1524,7 @@ export default function BNGBlasterPage() {
                                                                                 checked={selectedCfgIds.has(c.id)}
                                                                                 onClick={e => e.stopPropagation()}
                                                                                 onChange={() => toggleCfgSelected(c.id)}
-                                                                                className="mt-1 shrink-0 rounded border-[var(--border-color)] text-indigo-500 focus:ring-indigo-400"
+                                                                                className="mt-1 shrink-0 rounded border-[var(--border-color)] text-cyan-500 focus:ring-cyan-400"
                                                                                 title="Select for bulk action"
                                                                             />
                                                                         <div className="min-w-0">
@@ -1707,7 +1721,7 @@ export default function BNGBlasterPage() {
                                                 <span className="ml-1 font-mono text-[10px] opacity-70">({ifaceSetupLog.ifaces.join(', ')})</span>
                                             )}
                                         </div>
-                                        <button onClick={() => setIfaceSetupLog(null)} className="shrink-0 opacity-50 hover:opacity-100">✕</button>
+                                        <button onClick={() => setIfaceSetupLog(null)} aria-label="Dismiss" title="Dismiss" className="shrink-0 opacity-50 hover:opacity-100">✕</button>
                                     </div>
                                     {/* Show SSH output detail on failure */}
                                     {!ifaceSetupLog.ok && (ifaceSetupLog.stderr || ifaceSetupLog.stdout) && (
@@ -1719,11 +1733,11 @@ export default function BNGBlasterPage() {
                             )}
 
                             {/* ══ TOP: Instances on Server ══ */}
-                            <div className="border-2 border-indigo-400/60 rounded-xl overflow-hidden">
-                                <div className="flex items-center justify-between px-4 py-3 bg-indigo-500/10 border-b border-indigo-400/30">
+                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                                        <ServerIcon className="w-4 h-4 text-indigo-500" />
-                                        <span className="text-indigo-600 dark:text-indigo-400">Instances on Server</span>
+                                        <ServerIcon className="w-4 h-4 text-cyan-500" />
+                                        <span className="text-cyan-600 dark:text-cyan-400">Instances on Server</span>
                                     </h3>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] bg-[var(--bg-primary)] text-[var(--text-muted)] px-2 py-0.5 rounded-full font-bold">
@@ -1734,10 +1748,10 @@ export default function BNGBlasterPage() {
                                             {(['running', 'all'] as const).map(f => (
                                                 <button
                                                     key={f}
-                                                    onClick={() => setInstFilter(f)}
+                                                    aria-pressed={instFilter === f} onClick={() => setInstFilter(f)}
                                                     className={`px-2.5 py-1 transition-colors ${
                                                         instFilter === f
-                                                            ? 'bg-indigo-500 text-white'
+                                                            ? 'bg-cyan-500 text-white'
                                                             : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'
                                                     }`}
                                                 >
@@ -1756,7 +1770,7 @@ export default function BNGBlasterPage() {
                                             value={instSearch}
                                             onChange={e => setInstSearch(e.target.value)}
                                             placeholder="Filter by name…"
-                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                         />
                                     </div>
                                 )}
@@ -1788,7 +1802,7 @@ export default function BNGBlasterPage() {
                                             return (
                                                 <div key={inst.name}>
                                                     {/* Instance row */}
-                                                    <div className={`flex items-center justify-between px-4 py-3 ${isMonitored ? 'bg-indigo-500/10' : 'hover:bg-[var(--bg-hover)]'} transition-colors`}>
+                                                    <div className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 ${isMonitored ? 'bg-cyan-500/10' : 'hover:bg-[var(--bg-hover)]'} transition-colors`}>
                                                         <div className="flex items-center gap-3 min-w-0">
                                                             <span className="font-mono text-sm font-semibold truncate">{inst.name}</span>
                                                             <StatusBadge status={inst.status} />
@@ -1798,8 +1812,8 @@ export default function BNGBlasterPage() {
                                                                 </span>
                                                             )}
                                                             {isMonitored && (
-                                                                <span className="flex items-center gap-1 text-[10px] text-indigo-600 font-semibold">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" />
+                                                                <span className="flex items-center gap-1 text-[10px] text-cyan-600 font-semibold">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse inline-block" />
                                                                     monitoring
                                                                 </span>
                                                             )}
@@ -1838,8 +1852,8 @@ export default function BNGBlasterPage() {
                                                                         onClick={() => toggleMonitor(inst.name)}
                                                                         className={`text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors ${
                                                                             isMonitored
-                                                                                ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
-                                                                                : 'bg-indigo-500 text-white hover:bg-indigo-600'
+                                                                                ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25'
+                                                                                : 'bg-cyan-500 text-white hover:bg-cyan-600'
                                                                         }`}
                                                                     >
                                                                         <BoltIcon className="w-3.5 h-3.5" />
@@ -1877,7 +1891,7 @@ export default function BNGBlasterPage() {
 
                                                     {/* Monitor panel — live stats */}
                                                     {isMonitored && (
-                                                        <div className="border-t border-[var(--border-color)] bg-indigo-500/5 p-4 space-y-4">
+                                                        <div className="border-t border-[var(--border-color)] bg-cyan-500/5 p-4 space-y-4">
 
                                                             {/* ── Network Interfaces ── */}
                                                             {netStats.length > 0 && (
@@ -1922,7 +1936,7 @@ export default function BNGBlasterPage() {
                                                                     <div className="overflow-x-auto rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)]">
                                                                         <table className="w-full text-[10px]">
                                                                             <thead>
-                                                                                <tr className="border-b border-indigo-100 bg-indigo-50">
+                                                                                <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                     {['Interface', 'NW-TX (pps)', 'NW-RX (pps)', 'NW-LOSS (pkts-stream)'].map(h => (
                                                                                         <th key={h} className="text-left py-1 px-2 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                     ))}
@@ -1930,11 +1944,11 @@ export default function BNGBlasterPage() {
                                                                             </thead>
                                                                             <tbody>
                                                                                 {netStats.map((iif, i) => (
-                                                                                    <tr key={i} className="border-b border-indigo-50 hover:bg-indigo-50/50">
+                                                                                    <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                                                                                         <td className="py-1 px-2 font-mono">{iif.name}</td>
                                                                                         <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
                                                                                         <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -1998,8 +2012,8 @@ export default function BNGBlasterPage() {
                                                                                         <td className="py-1 px-2 font-mono">{iif.name}</td>
                                                                                         <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
                                                                                         <td className="py-1 px-2 text-sky-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-streams']}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-multicast']}</td>
+                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -2036,7 +2050,7 @@ export default function BNGBlasterPage() {
                                                                             >Apply</button>
                                                                             <button
                                                                                 onClick={handleSelectAllFlows}
-                                                                                className="text-[11px] px-2.5 py-1 rounded bg-indigo-500 text-white font-semibold hover:bg-indigo-600"
+                                                                                className="text-[11px] px-2.5 py-1 rounded bg-cyan-500 text-white font-semibold hover:bg-cyan-600"
                                                                                 title={monitorTotalFlows > 500 ? 'Limited to first 500 flows' : `Select all ${monitorTotalFlows} flows`}
                                                                             >
                                                                                 {monitorTotalFlows > 500 ? 'Select first 500' : 'Select All'}
@@ -2057,7 +2071,7 @@ export default function BNGBlasterPage() {
                                                                         <div className="overflow-x-auto rounded-lg border border-[var(--border-color)] bg-[var(--bg-card)]">
                                                                             <table className="w-full text-[10px]">
                                                                                 <thead>
-                                                                                    <tr className="border-b border-purple-100 bg-purple-50">
+                                                                                    <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                         {['NAME', 'FLOW-ID', 'DIRECTION', 'SESSION-ID', 'TX (pps)', 'TX (bps)', 'RX (pps)', 'RX (bps)', 'PKT-LOSS'].map(h => (
                                                                                             <th key={h} className="text-left py-1 px-2 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                         ))}
@@ -2065,11 +2079,11 @@ export default function BNGBlasterPage() {
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     {streamStats.map((s, i) => (
-                                                                                        <tr key={i} className={`border-b border-purple-50 hover:bg-purple-50/50 ${s['rx-loss'] > 0 ? 'bg-red-50' : ''}`}>
+                                                                                        <tr key={i} className={`border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)] ${s['rx-loss'] > 0 ? 'bg-red-500/10' : ''}`}>
                                                                                             <td className="py-1 px-2 font-medium max-w-[100px] truncate" title={s.name}>{s.name}</td>
                                                                                             <td className="py-1 px-2">{s['flow-id']}</td>
                                                                                             <td className="py-1 px-2">
-                                                                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${s.direction === 'upstream' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${s.direction === 'upstream' ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
                                                                                                     {s.direction === 'upstream' ? '↑ UP' : '↓ DN'}
                                                                                                 </span>
                                                                                             </td>
@@ -2078,7 +2092,7 @@ export default function BNGBlasterPage() {
                                                                                             <td className="py-1 px-2 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
                                                                                             <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
                                                                                             <td className="py-1 px-2 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
-                                                                                            <td className={`py-1 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-gray-300'}`}>{s['rx-loss']}</td>
+                                                                                            <td className={`py-1 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
                                                                                         </tr>
                                                                                     ))}
                                                                                 </tbody>
@@ -2093,7 +2107,7 @@ export default function BNGBlasterPage() {
                                                             )}
 
                                                             {netStats.length === 0 && accStats.length === 0 && (
-                                                                <p className="text-xs text-indigo-400 text-center py-2">Waiting for monitoring data…</p>
+                                                                <p className="text-xs text-cyan-400 text-center py-2">Waiting for monitoring data…</p>
                                                             )}
 
                                                             {/* Log */}
@@ -2164,7 +2178,7 @@ export default function BNGBlasterPage() {
                                                     onClick={() => setCfgRunFilter(f)}
                                                     className={`px-2.5 py-1 transition-colors ${
                                                         cfgRunFilter === f
-                                                            ? 'bg-indigo-500 text-white'
+                                                            ? 'bg-cyan-500 text-white'
                                                             : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'
                                                     }`}
                                                 >
@@ -2183,7 +2197,7 @@ export default function BNGBlasterPage() {
                                             value={cfgRunSearch}
                                             onChange={e => setCfgRunSearch(e.target.value)}
                                             placeholder="Search configs by name or description…"
-                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                                            className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                         />
                                     </div>
                                 )}
@@ -2223,7 +2237,7 @@ export default function BNGBlasterPage() {
                                                                 {existingInst && <StatusBadge status={existingInst.status} />}
                                                             </div>
                                                             <p className="text-[10px] text-[var(--text-muted)] font-mono mt-0.5">
-                                                                instance: <span className="text-indigo-600">{instName}</span>
+                                                                instance: <span className="text-cyan-600">{instName}</span>
                                                             </p>
                                                             {c.description && (
                                                                 <p className="text-[10px] text-[var(--text-muted)] truncate">{c.description}</p>
@@ -2313,11 +2327,11 @@ export default function BNGBlasterPage() {
                         <div className="space-y-4">
 
                             {/* ══ Instances on Server (mirrored from Run tab) ══ */}
-                            <div className="border-2 border-indigo-400/60 rounded-xl overflow-hidden">
-                                <div className="flex items-center justify-between px-4 py-3 bg-indigo-500/10 border-b border-indigo-400/30">
+                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
-                                        <ServerIcon className="w-4 h-4 text-indigo-500" />
-                                        <span className="text-indigo-600 dark:text-indigo-400">Instances on Server</span>
+                                        <ServerIcon className="w-4 h-4 text-cyan-500" />
+                                        <span className="text-cyan-600 dark:text-cyan-400">Instances on Server</span>
                                     </h3>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] bg-[var(--bg-primary)] text-[var(--text-muted)] px-2 py-0.5 rounded-full font-bold">
@@ -2325,8 +2339,8 @@ export default function BNGBlasterPage() {
                                         </span>
                                         <div className="flex rounded-lg border border-[var(--border-color)] overflow-hidden text-[11px] font-semibold">
                                             {(['running', 'all'] as const).map(f => (
-                                                <button key={f} onClick={() => setInstFilter(f)}
-                                                    className={`px-2.5 py-1 transition-colors ${instFilter === f ? 'bg-indigo-500 text-white' : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'}`}>
+                                                <button key={f} aria-pressed={instFilter === f} onClick={() => setInstFilter(f)}
+                                                    className={`px-2.5 py-1 transition-colors ${instFilter === f ? 'bg-cyan-500 text-white' : 'bg-[var(--bg-card)] text-[var(--text-muted)] hover:bg-[var(--bg-hover)]'}`}>
                                                     {f === 'running' ? 'Running' : 'All'}
                                                 </button>
                                             ))}
@@ -2356,7 +2370,7 @@ export default function BNGBlasterPage() {
                                                     ? `Owned by @${ownerName} — no permission`
                                                     : 'No permission to control this instance';
                                                 return (
-                                                    <div key={inst.name} className={`flex items-center justify-between px-4 py-3 ${isMonitored ? 'bg-indigo-500/10' : 'hover:bg-[var(--bg-hover)]'} transition-colors`}>
+                                                    <div key={inst.name} className={`flex flex-wrap items-center justify-between gap-2 px-4 py-3 ${isMonitored ? 'bg-cyan-500/10' : 'hover:bg-[var(--bg-hover)]'} transition-colors`}>
                                                         <div className="flex items-center gap-3 min-w-0">
                                                             <span className="font-mono text-sm font-semibold truncate">{inst.name}</span>
                                                             <StatusBadge status={inst.status} />
@@ -2366,8 +2380,8 @@ export default function BNGBlasterPage() {
                                                                 </span>
                                                             )}
                                                             {isMonitored && (
-                                                                <span className="flex items-center gap-1 text-[10px] text-indigo-600 font-semibold">
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" />monitoring
+                                                                <span className="flex items-center gap-1 text-[10px] text-cyan-600 font-semibold">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse inline-block" />monitoring
                                                                 </span>
                                                             )}
                                                         </div>
@@ -2396,7 +2410,7 @@ export default function BNGBlasterPage() {
                                                                         {instActionLoading[`${inst.name}:kill`] ? 'Killing…' : 'Kill'}
                                                                     </button>
                                                                     <button onClick={() => { toggleMonitor(inst.name); setTab('run'); }}
-                                                                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors ${isMonitored ? 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200' : 'bg-indigo-500 text-white hover:bg-indigo-600'}`}
+                                                                        className={`text-xs px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1 transition-colors ${isMonitored ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/25' : 'bg-cyan-500 text-white hover:bg-cyan-600'}`}
                                                                         title="Switch to Run & Monitor tab to view live stats">
                                                                         <BoltIcon className="w-3.5 h-3.5" />
                                                                         {isMonitored ? 'Stop Monitor' : 'Monitor'}
@@ -2461,8 +2475,8 @@ export default function BNGBlasterPage() {
         {fullscreenTable && createPortal(
             <div className="fixed inset-0 z-[9999] bg-black/60 flex items-start justify-center p-4 overflow-auto" onClick={() => setFullscreenTable(null)}>
                 <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-7xl mt-8" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                        <h3 className="text-sm font-bold text-gray-700">
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
+                        <h3 className="text-sm font-bold text-[var(--text-primary)]">
                             {fullscreenTable === 'network' ? 'Network Interfaces' : fullscreenTable === 'access' ? 'Access Interfaces' : 'Stream Statistics'}
                         </h3>
                         <div className="flex items-center gap-2">
@@ -2476,12 +2490,12 @@ export default function BNGBlasterPage() {
                                         ? [{ key: 'name', label: 'Interface' }, { key: 'tx-pps', label: 'AC-TX(pps)' }, { key: 'rx-pps', label: 'AC-RX(pps)' }, { key: 'rx-loss-packets-streams', label: 'AC-LOSS(stream)' }, { key: 'rx-loss-packets-multicast', label: 'AC-LOSS(mcast)' }]
                                         : [{ key: 'name', label: 'NAME' }, { key: 'flow-id', label: 'FLOW-ID' }, { key: 'direction', label: 'DIRECTION' }, { key: 'session-id', label: 'SESSION-ID' }, { key: 'tx-pps', label: 'TX(pps)' }, { key: 'tx-bps-l2', label: 'TX(bps)' }, { key: 'rx-pps', label: 'RX(pps)' }, { key: 'rx-bps-l2', label: 'RX(bps)' }, { key: 'rx-loss', label: 'PKT-LOSS' }]
                                 )}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                                 title="Download CSV"
                             >
                                 <ArrowDownTrayIcon className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setFullscreenTable(null)} className="text-gray-400 hover:text-gray-600" title="Close">
+                            <button onClick={() => setFullscreenTable(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)]" title="Close">
                                 <XMarkIcon className="w-5 h-5" />
                             </button>
                         </div>
@@ -2490,7 +2504,7 @@ export default function BNGBlasterPage() {
                         {fullscreenTable === 'network' && (
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-indigo-100 bg-indigo-50">
+                                    <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                         {['Interface', 'NW-TX (pps)', 'NW-RX (pps)', 'NW-LOSS (pkts-stream)'].map(h => (
                                             <th key={h} className="text-left py-2 px-3 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
                                         ))}
@@ -2498,11 +2512,11 @@ export default function BNGBlasterPage() {
                                 </thead>
                                 <tbody>
                                     {netStats.map((iif, i) => (
-                                        <tr key={i} className="border-b border-indigo-50 hover:bg-indigo-50/50">
+                                        <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
                                             <td className="py-2 px-3 font-mono">{iif.name}</td>
                                             <td className="py-2 px-3 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
                                             <td className="py-2 px-3 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-streams']}</td>
+                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -2523,8 +2537,8 @@ export default function BNGBlasterPage() {
                                             <td className="py-2 px-3 font-mono">{iif.name}</td>
                                             <td className="py-2 px-3 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
                                             <td className="py-2 px-3 text-blue-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-streams']}</td>
-                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-gray-300'}`}>{iif['rx-loss-packets-multicast']}</td>
+                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                            <td className={`py-2 px-3 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -2533,7 +2547,7 @@ export default function BNGBlasterPage() {
                         {fullscreenTable === 'stream' && (
                             <table className="w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-purple-100 bg-purple-50">
+                                    <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                         {['NAME', 'FLOW-ID', 'DIRECTION', 'SESSION-ID', 'TX (pps)', 'TX (bps)', 'RX (pps)', 'RX (bps)', 'PKT-LOSS'].map(h => (
                                             <th key={h} className="text-left py-2 px-3 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
                                         ))}
@@ -2541,11 +2555,11 @@ export default function BNGBlasterPage() {
                                 </thead>
                                 <tbody>
                                     {streamStats.map((s, i) => (
-                                        <tr key={i} className={`border-b border-purple-50 hover:bg-purple-50/50 ${s['rx-loss'] > 0 ? 'bg-red-50' : ''}`}>
+                                        <tr key={i} className={`border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)] ${s['rx-loss'] > 0 ? 'bg-red-500/10' : ''}`}>
                                             <td className="py-2 px-3 font-medium">{s.name}</td>
                                             <td className="py-2 px-3">{s['flow-id']}</td>
                                             <td className="py-2 px-3">
-                                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${s.direction === 'upstream' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                <span className={`px-1.5 py-0.5 rounded text-xs font-bold ${s.direction === 'upstream' ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
                                                     {s.direction === 'upstream' ? '↑ UP' : '↓ DN'}
                                                 </span>
                                             </td>
@@ -2554,7 +2568,7 @@ export default function BNGBlasterPage() {
                                             <td className="py-2 px-3 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
                                             <td className="py-2 px-3 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
                                             <td className="py-2 px-3 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
-                                            <td className={`py-2 px-3 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-gray-300'}`}>{s['rx-loss']}</td>
+                                            <td className={`py-2 px-3 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -2853,8 +2867,8 @@ function ReportDashboard({ report, instanceName, onDownload }: { report: any; in
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center shrink-0">
-                        <ChartBarIcon className="w-5 h-5 text-indigo-500" />
+                    <div className="w-9 h-9 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
+                        <ChartBarIcon className="w-5 h-5 text-cyan-500" />
                     </div>
                     <div>
                         <h3 className="text-base font-bold text-[var(--text-primary)]">{instanceName}</h3>
