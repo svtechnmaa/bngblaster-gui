@@ -34,7 +34,7 @@ import { can, type Role } from '../utils/permissions';
 interface BNGServer { id: number; name: string; host: string; port: number; ssh_user?: string; ssh_pass?: string; }
 interface BNGConfig  {
     id: number; name: string; description?: string; config_json: any; updated_at?: string;
-    is_owner?: boolean; owner_username?: string; user_id?: number;
+    is_owner?: boolean; owner_username?: string; user_id?: number; tags?: string[];
 }
 
 interface NetIfaceStats  { name: string; 'tx-pps': number; 'rx-pps': number; 'rx-loss-packets-streams': number; }
@@ -197,6 +197,8 @@ export default function BNGBlasterPage() {
     const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
     const [cfgName, setCfgName] = useState('');
     const [cfgDesc, setCfgDesc] = useState('');
+    const [cfgTags, setCfgTags] = useState<string[]>([]);
+    const [cfgTagInput, setCfgTagInput] = useState('');
     const [cfgJson, setCfgJson] = useState(JSON.stringify(DEFAULT_CONFIG, null, 2));
     const [cfgSaving, setCfgSaving] = useState(false);
     const [cfgError, setCfgError] = useState('');
@@ -452,6 +454,7 @@ export default function BNGBlasterPage() {
     const startNewConfig = () => {
         setEditingCfg(null);
         setCfgName(''); setCfgDesc('');
+        setCfgTags([]); setCfgTagInput('');
         setCfgJson(JSON.stringify(DEFAULT_CONFIG, null, 2));
         setCfgError('');
     };
@@ -459,6 +462,7 @@ export default function BNGBlasterPage() {
     const startEditConfig = (c: BNGConfig) => {
         setEditingCfg(c);
         setCfgName(c.name); setCfgDesc(c.description || '');
+        setCfgTags(c.tags ?? []); setCfgTagInput('');
         setCfgJson(JSON.stringify(c.config_json, null, 2));
         setCfgError('');
     };
@@ -470,6 +474,13 @@ export default function BNGBlasterPage() {
         if (!trimmed) return null;
         return configs.find(c => c.name === trimmed && c.id !== editingCfg?.id) ?? null;
     })();
+
+    const addCfgTag = (raw: string) => {
+        const t = raw.trim().slice(0, 30).trim();
+        if (!t) return;
+        setCfgTags(prev => prev.some(x => x.toLowerCase() === t.toLowerCase()) || prev.length >= 10 ? prev : [...prev, t]);
+        setCfgTagInput('');
+    };
 
     const handleSaveConfig = async () => {
         if (!cfgName.trim()) { setCfgError('Name is required'); return; }
@@ -484,10 +495,10 @@ export default function BNGBlasterPage() {
         setCfgSaving(true); setCfgError('');
         try {
             if (editingCfg) {
-                const r = await api.put(`/bngblaster/configs/${editingCfg.id}`, { name: cfgName.trim(), description: cfgDesc, config_json: parsed });
+                const r = await api.put(`/bngblaster/configs/${editingCfg.id}`, { name: cfgName.trim(), description: cfgDesc, tags: cfgTags, config_json: parsed });
                 setConfigs(cs => cs.map(c => c.id === editingCfg.id ? r.data : c));
             } else {
-                const r = await api.post('/bngblaster/configs', { name: cfgName.trim(), description: cfgDesc, config_json: parsed });
+                const r = await api.post('/bngblaster/configs', { name: cfgName.trim(), description: cfgDesc, tags: cfgTags, config_json: parsed });
                 setConfigs(cs => [r.data, ...cs]);
             }
             startNewConfig();
@@ -995,6 +1006,8 @@ export default function BNGBlasterPage() {
                 : 'bg-amber-100 text-amber-700';
         return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${cls}`}>{status}</span>;
     };
+
+    const allCfgTags = Array.from(new Set(configs.flatMap(c => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
@@ -1647,6 +1660,32 @@ export default function BNGBlasterPage() {
                                                 <div>
                                                     <label className="block text-xs text-[var(--text-muted)] mb-1">Description</label>
                                                     <input className="input-field text-sm" placeholder="Optional description" value={cfgDesc} onChange={e => setCfgDesc(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-[var(--text-muted)] mb-1">Tags</label>
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        {cfgTags.map(t => (
+                                                            <span key={t} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 border border-cyan-500/25">
+                                                                {t}
+                                                                <button type="button" onClick={() => setCfgTags(prev => prev.filter(x => x !== t))} className="hover:text-red-500" aria-label={`Remove tag ${t}`}>×</button>
+                                                            </span>
+                                                        ))}
+                                                        <input
+                                                            className="input-field text-sm flex-1 min-w-[8rem]"
+                                                            placeholder={cfgTags.length >= 10 ? 'Max 10 tags' : 'Add tag + Enter'}
+                                                            disabled={cfgTags.length >= 10}
+                                                            list="cfg-tag-suggestions"
+                                                            value={cfgTagInput}
+                                                            onChange={e => setCfgTagInput(e.target.value)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addCfgTag(cfgTagInput); }
+                                                                else if (e.key === 'Backspace' && !cfgTagInput && cfgTags.length) setCfgTags(prev => prev.slice(0, -1));
+                                                            }}
+                                                        />
+                                                        <datalist id="cfg-tag-suggestions">
+                                                            {allCfgTags.filter(t => !cfgTags.includes(t)).map(t => <option key={t} value={t} />)}
+                                                        </datalist>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div>
