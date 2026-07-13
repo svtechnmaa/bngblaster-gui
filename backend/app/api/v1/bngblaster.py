@@ -353,7 +353,7 @@ def _clean_tags(raw: object) -> list[str]:
     for item in raw:
         if not isinstance(item, str):
             continue
-        t = item.strip()[:30].strip()
+        t = item.strip()[:30].strip()  # trailing .strip() removes whitespace left dangling by the [:30] truncation
         if not t:
             continue
         key = t.lower()

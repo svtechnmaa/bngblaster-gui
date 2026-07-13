@@ -1536,7 +1536,18 @@ export default function BNGBlasterPage() {
                                                     return !q || c.name.toLowerCase().includes(q) || (c.description ?? '').toLowerCase().includes(q);
                                                 });
                                                 if (configs.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs yet.</p>;
-                                                if (visible.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs match.</p>;
+                                                if (visible.length === 0) return (
+                                                    <div className="text-center py-4 space-y-2">
+                                                        <p className="text-xs text-[var(--text-muted)]">No configs match.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedTags([]); setOwnerFilter('all'); setSavedCfgSearch(''); setSavedCfgFilter('all'); }}
+                                                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] underline cursor-pointer"
+                                                        >
+                                                            Reset filters
+                                                        </button>
+                                                    </div>
+                                                );
                                                 const visibleIds = visible.map(v => v.id);
                                                 const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCfgIds.has(id));
                                                 const selCount = selectedCfgIds.size;
