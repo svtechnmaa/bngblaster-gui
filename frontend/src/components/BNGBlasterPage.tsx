@@ -101,6 +101,75 @@ function fmtBps(n: number) {
     return `${n} bps`;
 }
 
+// ── Instrument status rail ────────────────────────────────────────────────────
+// A measurement-instrument "faceplate": LED link/traffic lamps + live telemetry
+// readouts. Deliberately keeps a dark readout look in both themes (like a real
+// tester's front panel). Motion is disabled under prefers-reduced-motion.
+function Led({ on, pulse = false, label }: { on: boolean; pulse?: boolean; label: string }) {
+    return (
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[#93a9cc]">
+            <span
+                className={`w-2.5 h-2.5 rounded-full ${pulse ? 'motion-safe:animate-pulse' : ''}`}
+                style={{
+                    background: on ? '#34d399' : '#475569',
+                    boxShadow: on ? '0 0 8px 1px rgba(52,211,153,0.85)' : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
+                }}
+            />
+            {label}
+        </div>
+    );
+}
+
+function InstrumentReadout({ label, value, unit, tone, title }: { label: string; value: string; unit?: string; tone?: 'tx' | 'rx'; title?: string }) {
+    const valueColor = tone === 'tx' ? '#fdba74' : tone === 'rx' ? '#7dd3fc' : '#eaf2ff';
+    return (
+        <div className="flex flex-col justify-center gap-0.5 px-4 py-2.5 border-r border-[rgba(120,160,220,0.16)] whitespace-nowrap" title={title}>
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#7f9ec9]">{label}</span>
+            <span className="flex items-baseline gap-1.5 font-mono tabular-nums text-[15px] font-semibold" style={{ color: valueColor }}>
+                {value}{unit && <span className="text-[10px] font-semibold text-[#7f9ec9]">{unit}</span>}
+            </span>
+        </div>
+    );
+}
+
+function InstrumentRail({ server, total, running, monitoring, txPps, rxPps, hasLive }: {
+    server: BNGServer | null; total: number; running: number; monitoring: boolean; txPps: number; rxPps: number; hasLive: boolean;
+}) {
+    const state = monitoring ? 'Live' : running > 0 ? 'Running' : 'Idle';
+    const idle = state === 'Idle';
+    return (
+        <div
+            role="status"
+            aria-label={`Instrument status: controller ${server ? server.name : 'none'}, ${running} of ${total} instances running, ${state}`}
+            className="rounded-xl overflow-hidden border border-cyan-500/25 shadow-[var(--shadow-md)]"
+            style={{
+                background:
+                    'linear-gradient(rgba(120,160,220,0.10) 1px, transparent 1px) 0 0 / 100% 22px,' +
+                    'linear-gradient(90deg,#0b1220,#0e1830 55%,#0b1220)',
+            }}
+        >
+            <div className="flex items-stretch overflow-x-auto">
+                <div className="flex flex-col justify-center gap-1.5 px-4 py-2.5 border-r border-[rgba(120,160,220,0.16)]">
+                    <Led on={!!server} label="Controller" />
+                    <Led on={running > 0} pulse={running > 0} label="Traffic" />
+                </div>
+                <InstrumentReadout label="Controller" value={server ? server.name : '—'} unit={server ? `:${server.port}` : undefined} title={server ? `${server.host}:${server.port}` : 'No server selected'} />
+                <InstrumentReadout label="Instances" value={String(running)} unit={`/ ${total} up`} />
+                <InstrumentReadout label="TX rate" value={hasLive ? fmtPps(txPps) : '—'} unit="pps" tone="tx" />
+                <InstrumentReadout label="RX rate" value={hasLive ? fmtPps(rxPps) : '—'} unit="pps" tone="rx" />
+                <div className="ml-auto flex items-center px-4">
+                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.14em] border ${
+                        idle ? 'bg-slate-500/15 text-slate-300 border-slate-400/30' : 'bg-emerald-400/15 text-emerald-300 border-emerald-400/35'
+                    }`}>
+                        <span className={`w-2 h-2 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-400 motion-safe:animate-pulse'}`} />
+                        {state}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ── Shared tab button ────────────────────────────────────────────────────────
 
 function Tab({ active, onClick, icon: Icon, label, badge }: { active: boolean; onClick: () => void; icon: any; label: string; badge?: string | number }) {
@@ -985,6 +1054,25 @@ export default function BNGBlasterPage() {
                     {globalError}
                 </div>
             )}
+
+            {/* Instrument status rail */}
+            {(() => {
+                const running = allInstances.filter(i => i.status === 'started').length;
+                const hasLive = monitoring && netStats.length > 0;
+                const txPps = hasLive ? netStats.reduce((a, i) => a + (i['tx-pps'] || 0), 0) : 0;
+                const rxPps = hasLive ? netStats.reduce((a, i) => a + (i['rx-pps'] || 0), 0) : 0;
+                return (
+                    <InstrumentRail
+                        server={selServer}
+                        total={allInstances.length}
+                        running={running}
+                        monitoring={monitoring}
+                        txPps={txPps}
+                        rxPps={rxPps}
+                        hasLive={hasLive}
+                    />
+                );
+            })()}
 
             {/* Tabs */}
             <div className="glass-card overflow-hidden">
@@ -1897,7 +1985,7 @@ export default function BNGBlasterPage() {
                                                             {netStats.length > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-indigo-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-indigo-500 flex items-center gap-1">
                                                                             <BoltIcon className="w-3 h-3" />Network Interfaces
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                                                         </h5>
@@ -1938,17 +2026,17 @@ export default function BNGBlasterPage() {
                                                                             <thead>
                                                                                 <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                     {['Interface', 'NW-TX (pps)', 'NW-RX (pps)', 'NW-LOSS (pkts-stream)'].map(h => (
-                                                                                        <th key={h} className="text-left py-1 px-2 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                        <th key={h} className="text-left py-1.5 px-2 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                     ))}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
                                                                                 {netStats.map((iif, i) => (
                                                                                     <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
-                                                                                        <td className="py-1 px-2 font-mono">{iif.name}</td>
-                                                                                        <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
-                                                                                        <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className="py-1.5 px-2 font-mono">{iif.name}</td>
+                                                                                        <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
+                                                                                        <td className="py-1.5 px-2 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -1961,7 +2049,7 @@ export default function BNGBlasterPage() {
                                                             {accStats.length > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-blue-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-blue-500 flex items-center gap-1">
                                                                             <BoltIcon className="w-3 h-3" />Access Interfaces
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                                                         </h5>
@@ -2002,18 +2090,18 @@ export default function BNGBlasterPage() {
                                                                             <thead>
                                                                                 <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                     {['Interface', 'AC-TX (pps)', 'AC-RX (pps)', 'AC-LOSS (pkts-stream)', 'AC-LOSS (pkts-mcast)'].map(h => (
-                                                                                        <th key={h} className="text-left py-1 px-2 text-blue-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                        <th key={h} className="text-left py-1.5 px-2 text-blue-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                     ))}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
                                                                                 {accStats.map((iif, i) => (
                                                                                     <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
-                                                                                        <td className="py-1 px-2 font-mono">{iif.name}</td>
-                                                                                        <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
-                                                                                        <td className="py-1 px-2 text-sky-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
+                                                                                        <td className="py-1.5 px-2 font-mono">{iif.name}</td>
+                                                                                        <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
+                                                                                        <td className="py-1.5 px-2 text-sky-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -2026,7 +2114,7 @@ export default function BNGBlasterPage() {
                                                             {monitorTotalFlows > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-purple-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-purple-500 flex items-center gap-1">
                                                                             <ChartBarIcon className="w-3 h-3" />
                                                                             Stream Statistics
                                                                             <span className="font-normal text-gray-400">({monitorTotalFlows} flows total{selectedFlowIds.length > 0 ? ` · showing ${selectedFlowIds.length}` : ' · none selected'})</span>
@@ -2073,26 +2161,26 @@ export default function BNGBlasterPage() {
                                                                                 <thead>
                                                                                     <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                         {['NAME', 'FLOW-ID', 'DIRECTION', 'SESSION-ID', 'TX (pps)', 'TX (bps)', 'RX (pps)', 'RX (bps)', 'PKT-LOSS'].map(h => (
-                                                                                            <th key={h} className="text-left py-1 px-2 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                            <th key={h} className="text-left py-1.5 px-2 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                         ))}
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     {streamStats.map((s, i) => (
                                                                                         <tr key={i} className={`border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)] ${s['rx-loss'] > 0 ? 'bg-red-500/10' : ''}`}>
-                                                                                            <td className="py-1 px-2 font-medium max-w-[100px] truncate" title={s.name}>{s.name}</td>
-                                                                                            <td className="py-1 px-2">{s['flow-id']}</td>
-                                                                                            <td className="py-1 px-2">
+                                                                                            <td className="py-1.5 px-2 font-medium max-w-[100px] truncate" title={s.name}>{s.name}</td>
+                                                                                            <td className="py-1.5 px-2">{s['flow-id']}</td>
+                                                                                            <td className="py-1.5 px-2">
                                                                                                 <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${s.direction === 'upstream' ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
                                                                                                     {s.direction === 'upstream' ? '↑ UP' : '↓ DN'}
                                                                                                 </span>
                                                                                             </td>
-                                                                                            <td className="py-1 px-2">{s['session-id'] ?? '—'}</td>
-                                                                                            <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(s['tx-pps'])}</td>
-                                                                                            <td className="py-1 px-2 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
-                                                                                            <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
-                                                                                            <td className="py-1 px-2 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
-                                                                                            <td className={`py-1 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
+                                                                                            <td className="py-1.5 px-2">{s['session-id'] ?? '—'}</td>
+                                                                                            <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(s['tx-pps'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
+                                                                                            <td className={`py-1.5 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
                                                                                         </tr>
                                                                                     ))}
                                                                                 </tbody>
@@ -2112,7 +2200,7 @@ export default function BNGBlasterPage() {
 
                                                             {/* Log */}
                                                             <div className="flex items-center justify-between gap-2">
-                                                                <h5 className="text-[10px] font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1">
+                                                                <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1">
                                                                     <ClipboardDocumentListIcon className="w-3 h-3" />Run Log
                                                                     {logText && logText !== '(empty log)' && (
                                                                         <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-700 text-green-400 font-semibold normal-case">

@@ -4,7 +4,7 @@ import {
     Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import {
-    UsersIcon, ServerIcon, Cog6ToothIcon, EyeIcon,
+    UsersIcon, ServerIcon, Cog6ToothIcon, EyeIcon, ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 
 import { fetchDashboardStats, type DashboardStats } from '../../services/metrics';
@@ -18,7 +18,7 @@ function StatCard({ icon: Icon, label, value, accent }: {
     accent: string;
 }) {
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 shadow-[var(--shadow-sm)]">
+        <div className="glass-card p-5">
             <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-medium text-[var(--text-muted)] uppercase tracking-wide">{label}</span>
                 <span style={{ color: accent }}><Icon className="w-5 h-5" /></span>
@@ -32,7 +32,7 @@ function ChartCard({ title, children, height = 280 }: {
     title: string; children: React.ReactNode; height?: number;
 }) {
     return (
-        <div className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 shadow-[var(--shadow-sm)]">
+        <div className="glass-card p-5">
             <h3 className="text-sm font-semibold text-[var(--text-primary)] mb-4">{title}</h3>
             <div style={{ width: '100%', height }}>
                 <ResponsiveContainer>{children as React.ReactElement}</ResponsiveContainer>
@@ -57,7 +57,12 @@ export default function DashboardTab() {
         return <div className="p-8 text-[var(--color-danger)]">Error: {error}</div>;
     }
     if (!stats) {
-        return <div className="p-8 text-[var(--text-muted)]">Loading…</div>;
+        return (
+            <div className="p-8 flex items-center gap-2 text-[var(--text-muted)] text-sm">
+                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+                Loading dashboard…
+            </div>
+        );
     }
 
     const canSeeUserStats = stats.role === 'admin' || stats.role === 'operator';
