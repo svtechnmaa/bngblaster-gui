@@ -134,6 +134,38 @@ body {
   box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
 }
 
+/* ── Instrument rail (measurement-instrument faceplate) ── */
+.instrument-rail {
+  /* light faceplate */
+  --ir-grid:     rgba(30,64,120,0.06);
+  --ir-divider:  rgba(30,64,120,0.12);
+  --ir-label:    #64748b;
+  --ir-value:    #0f172a;
+  --ir-unit:     #94a3b8;
+  --ir-tx:       #ea580c;
+  --ir-rx:       #0891b2;
+  --ir-led-off:  #cbd5e1;
+  background:
+    linear-gradient(var(--ir-grid) 1px, transparent 1px) 0 0 / 100% 20px,
+    linear-gradient(90deg, #eef2f9, #e4ebf6 55%, #eef2f9);
+  border: 1px solid rgba(8,145,178,0.28);
+}
+[data-theme="dark"] .instrument-rail {
+  /* dark faceplate — like a lit device readout */
+  --ir-grid:     rgba(120,160,220,0.10);
+  --ir-divider:  rgba(120,160,220,0.16);
+  --ir-label:    #7f9ec9;
+  --ir-value:    #eaf2ff;
+  --ir-unit:     #7f9ec9;
+  --ir-tx:       #fdba74;
+  --ir-rx:       #7dd3fc;
+  --ir-led-off:  #475569;
+  background:
+    linear-gradient(var(--ir-grid) 1px, transparent 1px) 0 0 / 100% 20px,
+    linear-gradient(90deg, #0b1220, #0e1830 55%, #0b1220);
+  border: 1px solid rgba(34,211,238,0.24);
+}
+
 .table-card {
   background: var(--bg-card);
   border: 1px solid var(--border-color);

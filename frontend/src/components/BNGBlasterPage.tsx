@@ -26,6 +26,7 @@ import ConfigBuilder from './ConfigBuilder';
 import DashboardTab from './dashboard/DashboardTab';
 import TopologyView from './topology/TopologyView';
 import { useAuthStore } from '../store/useAuthStore';
+import { useTelemetryStore } from '../store/useTelemetryStore';
 import { can, type Role } from '../utils/permissions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -99,75 +100,6 @@ function fmtBps(n: number) {
     if (n >= 1e6) return `${(n / 1e6).toFixed(1)} Mbps`;
     if (n >= 1e3) return `${(n / 1e3).toFixed(1)} kbps`;
     return `${n} bps`;
-}
-
-// ── Instrument status rail ────────────────────────────────────────────────────
-// A measurement-instrument "faceplate": LED link/traffic lamps + live telemetry
-// readouts. Deliberately keeps a dark readout look in both themes (like a real
-// tester's front panel). Motion is disabled under prefers-reduced-motion.
-function Led({ on, pulse = false, label }: { on: boolean; pulse?: boolean; label: string }) {
-    return (
-        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[#93a9cc]">
-            <span
-                className={`w-2.5 h-2.5 rounded-full ${pulse ? 'motion-safe:animate-pulse' : ''}`}
-                style={{
-                    background: on ? '#34d399' : '#475569',
-                    boxShadow: on ? '0 0 8px 1px rgba(52,211,153,0.85)' : 'inset 0 0 0 1px rgba(255,255,255,0.08)',
-                }}
-            />
-            {label}
-        </div>
-    );
-}
-
-function InstrumentReadout({ label, value, unit, tone, title }: { label: string; value: string; unit?: string; tone?: 'tx' | 'rx'; title?: string }) {
-    const valueColor = tone === 'tx' ? '#fdba74' : tone === 'rx' ? '#7dd3fc' : '#eaf2ff';
-    return (
-        <div className="flex flex-col justify-center gap-0.5 px-4 py-2.5 border-r border-[rgba(120,160,220,0.16)] whitespace-nowrap" title={title}>
-            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#7f9ec9]">{label}</span>
-            <span className="flex items-baseline gap-1.5 font-mono tabular-nums text-[15px] font-semibold" style={{ color: valueColor }}>
-                {value}{unit && <span className="text-[10px] font-semibold text-[#7f9ec9]">{unit}</span>}
-            </span>
-        </div>
-    );
-}
-
-function InstrumentRail({ server, total, running, monitoring, txPps, rxPps, hasLive }: {
-    server: BNGServer | null; total: number; running: number; monitoring: boolean; txPps: number; rxPps: number; hasLive: boolean;
-}) {
-    const state = monitoring ? 'Live' : running > 0 ? 'Running' : 'Idle';
-    const idle = state === 'Idle';
-    return (
-        <div
-            role="status"
-            aria-label={`Instrument status: controller ${server ? server.name : 'none'}, ${running} of ${total} instances running, ${state}`}
-            className="rounded-xl overflow-hidden border border-cyan-500/25 shadow-[var(--shadow-md)]"
-            style={{
-                background:
-                    'linear-gradient(rgba(120,160,220,0.10) 1px, transparent 1px) 0 0 / 100% 22px,' +
-                    'linear-gradient(90deg,#0b1220,#0e1830 55%,#0b1220)',
-            }}
-        >
-            <div className="flex items-stretch overflow-x-auto">
-                <div className="flex flex-col justify-center gap-1.5 px-4 py-2.5 border-r border-[rgba(120,160,220,0.16)]">
-                    <Led on={!!server} label="Controller" />
-                    <Led on={running > 0} pulse={running > 0} label="Traffic" />
-                </div>
-                <InstrumentReadout label="Controller" value={server ? server.name : '—'} unit={server ? `:${server.port}` : undefined} title={server ? `${server.host}:${server.port}` : 'No server selected'} />
-                <InstrumentReadout label="Instances" value={String(running)} unit={`/ ${total} up`} />
-                <InstrumentReadout label="TX rate" value={hasLive ? fmtPps(txPps) : '—'} unit="pps" tone="tx" />
-                <InstrumentReadout label="RX rate" value={hasLive ? fmtPps(rxPps) : '—'} unit="pps" tone="rx" />
-                <div className="ml-auto flex items-center px-4">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-[0.14em] border ${
-                        idle ? 'bg-slate-500/15 text-slate-300 border-slate-400/30' : 'bg-emerald-400/15 text-emerald-300 border-emerald-400/35'
-                    }`}>
-                        <span className={`w-2 h-2 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-400 motion-safe:animate-pulse'}`} />
-                        {state}
-                    </span>
-                </div>
-            </div>
-        </div>
-    );
 }
 
 // ── Shared tab button ────────────────────────────────────────────────────────
@@ -339,6 +271,21 @@ export default function BNGBlasterPage() {
     const [credsSaving, setCredsSaving] = useState(false);
     const [credsSaved, setCredsSaved]   = useState(false);
     const [showCredPass, setShowCredPass] = useState(false);
+
+    // ── Publish live telemetry to the TopBar instrument rail ──────────────
+    const setTelemetry = useTelemetryStore(s => s.setTelemetry);
+    const resetTelemetry = useTelemetryStore(s => s.reset);
+    useEffect(() => {
+        const running = allInstances.filter(i => i.status === 'started').length;
+        const hasLive = monitoring && netStats.length > 0;
+        const txPps = hasLive ? netStats.reduce((a, i) => a + (i['tx-pps'] || 0), 0) : 0;
+        const rxPps = hasLive ? netStats.reduce((a, i) => a + (i['rx-pps'] || 0), 0) : 0;
+        setTelemetry({
+            server: selServer ? { name: selServer.name, host: selServer.host, port: selServer.port } : null,
+            total: allInstances.length, running, monitoring, txPps, rxPps, hasLive,
+        });
+    }, [selServer, allInstances, monitoring, netStats, setTelemetry]);
+    useEffect(() => () => resetTelemetry(), [resetTelemetry]);
 
     // ── Load servers + configs + settings on mount ────────────────────────
     useEffect(() => {
@@ -1054,25 +1001,6 @@ export default function BNGBlasterPage() {
                     {globalError}
                 </div>
             )}
-
-            {/* Instrument status rail */}
-            {(() => {
-                const running = allInstances.filter(i => i.status === 'started').length;
-                const hasLive = monitoring && netStats.length > 0;
-                const txPps = hasLive ? netStats.reduce((a, i) => a + (i['tx-pps'] || 0), 0) : 0;
-                const rxPps = hasLive ? netStats.reduce((a, i) => a + (i['rx-pps'] || 0), 0) : 0;
-                return (
-                    <InstrumentRail
-                        server={selServer}
-                        total={allInstances.length}
-                        running={running}
-                        monitoring={monitoring}
-                        txPps={txPps}
-                        rxPps={rxPps}
-                        hasLive={hasLive}
-                    />
-                );
-            })()}
 
             {/* Tabs */}
             <div className="glass-card overflow-hidden">
@@ -1821,7 +1749,7 @@ export default function BNGBlasterPage() {
                             )}
 
                             {/* ══ TOP: Instances on Server ══ */}
-                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-cyan-500 overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <ServerIcon className="w-4 h-4 text-cyan-500" />
@@ -2251,7 +2179,7 @@ export default function BNGBlasterPage() {
                             </div>
 
                             {/* ══ BOTTOM: Saved Configs — Start New Test ══ */}
-                            <div className="border-2 border-emerald-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-emerald-500 overflow-hidden">
                                 <div className="px-4 py-3 bg-emerald-500/10 border-b border-emerald-400/30 flex items-center justify-between">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <PlayCircleIcon className="w-4 h-4 text-emerald-500" />
@@ -2415,7 +2343,7 @@ export default function BNGBlasterPage() {
                         <div className="space-y-4">
 
                             {/* ══ Instances on Server (mirrored from Run tab) ══ */}
-                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-cyan-500 overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <ServerIcon className="w-4 h-4 text-cyan-500" />
