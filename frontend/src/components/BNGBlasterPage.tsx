@@ -106,17 +106,26 @@ function fmtBps(n: number) {
 function Tab({ active, onClick, icon: Icon, label, badge }: { active: boolean; onClick: () => void; icon: any; label: string; badge?: string | number }) {
     return (
         <button
+            role="tab"
+            aria-selected={active}
             onClick={onClick}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`group relative flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium whitespace-nowrap cursor-pointer
+                transition-all duration-200 motion-reduce:transition-none
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70 ${
                 active
-                    ? 'border-orange-500 text-orange-500 bg-orange-500/10'
-                    : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
+                    ? 'text-white shadow-[var(--shadow-md)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
             }`}
+            style={active ? { background: 'linear-gradient(135deg, var(--color-primary) 0%, var(--accent-cyan) 100%)' } : undefined}
         >
-            <Icon className="w-4 h-4" />
+            <Icon className="w-4 h-4 shrink-0" />
             {label}
             {badge !== undefined && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${active ? 'bg-orange-500 text-white' : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'}`}>
+                <span className={`text-[10px] leading-none px-1.5 py-0.5 rounded-full font-bold tabular-nums transition-colors ${
+                    active
+                        ? 'bg-white/25 text-white'
+                        : 'bg-[var(--bg-hover)] text-[var(--text-muted)] group-hover:text-[var(--text-primary)]'
+                }`}>
                     {badge}
                 </span>
             )}
@@ -979,14 +988,20 @@ export default function BNGBlasterPage() {
 
             {/* Tabs */}
             <div className="glass-card overflow-hidden">
-                <div className="flex border-b border-[var(--border-color)] overflow-x-auto">
-                    <Tab active={tab === 'dashboard'} onClick={() => setTab('dashboard')} icon={PresentationChartLineIcon} label="Dashboard" />
-                    {role === 'admin' && (
-                        <Tab active={tab === 'servers'} onClick={() => setTab('servers')} icon={ServerIcon} label="Servers" badge={servers.length} />
-                    )}
-                    <Tab active={tab === 'configs'} onClick={() => setTab('configs')} icon={Cog6ToothIcon} label="Configs" badge={configs.length} />
-                    <Tab active={tab === 'run'} onClick={() => setTab('run')} icon={PlayCircleIcon} label="Run & Monitor" />
-                    <Tab active={tab === 'reports'} onClick={() => setTab('reports')} icon={ChartBarIcon} label="Reports" />
+                <div className="p-2 border-b border-[var(--border-color)]">
+                    <div
+                        role="tablist"
+                        aria-label="BNGBlaster sections"
+                        className="flex gap-1 p-1 rounded-xl bg-[var(--bg-hover)] overflow-x-auto"
+                    >
+                        <Tab active={tab === 'dashboard'} onClick={() => setTab('dashboard')} icon={PresentationChartLineIcon} label="Dashboard" />
+                        {role === 'admin' && (
+                            <Tab active={tab === 'servers'} onClick={() => setTab('servers')} icon={ServerIcon} label="Servers" badge={servers.length} />
+                        )}
+                        <Tab active={tab === 'configs'} onClick={() => setTab('configs')} icon={Cog6ToothIcon} label="Configs" badge={configs.length} />
+                        <Tab active={tab === 'run'} onClick={() => setTab('run')} icon={PlayCircleIcon} label="Run & Monitor" />
+                        <Tab active={tab === 'reports'} onClick={() => setTab('reports')} icon={ChartBarIcon} label="Reports" />
+                    </div>
                 </div>
 
                 <div className="p-4">
