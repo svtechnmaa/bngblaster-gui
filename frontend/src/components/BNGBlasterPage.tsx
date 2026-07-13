@@ -184,6 +184,7 @@ export default function BNGBlasterPage() {
     const [savedCfgFilter, setSavedCfgFilter] = useState<'all' | 'running' | 'idle'>('all');
     const [configs, setConfigs] = useState<BNGConfig[]>([]);
     const [editingCfg, setEditingCfg] = useState<BNGConfig | null>(null);
+    const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
     const [cfgName, setCfgName] = useState('');
     const [cfgDesc, setCfgDesc] = useState('');
     const [cfgJson, setCfgJson] = useState(JSON.stringify(DEFAULT_CONFIG, null, 2));
@@ -516,6 +517,42 @@ export default function BNGBlasterPage() {
         };
         const stamp = new Date().toISOString().slice(0, 10);
         triggerBrowserDownload(`bng-configs-${stamp}.json`, JSON.stringify(payload, null, 2));
+    };
+
+    // ── Bulk selection actions (multi-select in Saved Configs) ────────────────
+    const toggleCfgSelected = (id: number) => {
+        setSelectedCfgIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const clearCfgSelection = () => setSelectedCfgIds(new Set());
+
+    // Download each selected config as its own raw .json file
+    const handleBulkDownload = () => {
+        const chosen = configs.filter(c => selectedCfgIds.has(c.id));
+        if (chosen.length === 0) return;
+        chosen.forEach(handleDownloadConfig);
+    };
+
+    // Delete every selected config the current user is allowed to delete
+    const handleBulkDelete = async () => {
+        const chosen = configs.filter(c => selectedCfgIds.has(c.id));
+        const deletable = chosen.filter(c => can.deleteBNGConfig(role, c.is_owner !== false));
+        if (deletable.length === 0) { showErr('You have no permission to delete the selected configs'); return; }
+        const skipped = chosen.length - deletable.length;
+        const prompt = `Delete ${deletable.length} config(s)?` + (skipped ? ` (${skipped} skipped — no permission)` : '');
+        if (!confirm(prompt)) return;
+        const ids = deletable.map(c => c.id);
+        const results = await Promise.allSettled(ids.map(id => api.delete(`/bngblaster/configs/${id}`)));
+        const okIds = new Set(ids.filter((_, i) => results[i].status === 'fulfilled'));
+        const failed = results.length - okIds.size;
+        setConfigs(cs => cs.filter(c => !okIds.has(c.id)));
+        if (editingCfg && okIds.has(editingCfg.id)) startNewConfig();
+        clearCfgSelection();
+        if (failed) showErr(`${failed} config(s) failed to delete`);
     };
 
     const importFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1403,8 +1440,43 @@ export default function BNGBlasterPage() {
                                                 });
                                                 if (configs.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs yet.</p>;
                                                 if (visible.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs match.</p>;
+                                                const visibleIds = visible.map(v => v.id);
+                                                const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCfgIds.has(id));
+                                                const selCount = selectedCfgIds.size;
                                                 return (
                                                     <div className="space-y-2">
+                                                        {/* Bulk selection bar */}
+                                                        <div className="flex items-center gap-2 flex-wrap px-1">
+                                                            <label className="flex items-center gap-1.5 text-[11px] text-[var(--text-muted)] cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={allVisibleSelected}
+                                                                    onChange={() => setSelectedCfgIds(prev => {
+                                                                        const next = new Set(prev);
+                                                                        if (allVisibleSelected) visibleIds.forEach(id => next.delete(id));
+                                                                        else visibleIds.forEach(id => next.add(id));
+                                                                        return next;
+                                                                    })}
+                                                                    className="rounded border-[var(--border-color)] text-indigo-500 focus:ring-indigo-400"
+                                                                />
+                                                                Select all
+                                                            </label>
+                                                            {selCount > 0 && (
+                                                                <>
+                                                                    <span className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">{selCount} selected</span>
+                                                                    <div className="flex-1" />
+                                                                    <button onClick={handleBulkDownload} className="btn-secondary text-xs" title="Download each selected config (.json)">
+                                                                        <ArrowDownTrayIcon className="w-3 h-3" />Download
+                                                                    </button>
+                                                                    <button onClick={handleBulkDelete}
+                                                                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-lg border border-red-300 text-red-600 hover:bg-red-500/10 transition-colors"
+                                                                        title="Delete selected configs you have permission to delete">
+                                                                        <TrashIcon className="w-3 h-3" />Delete
+                                                                    </button>
+                                                                    <button onClick={clearCfgSelection} className="btn-secondary text-xs">Clear</button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                         {visible.map(c => {
                                                             const instName = toInstanceName(c.name);
                                                             const inst = allInstances.find(i => i.name === instName);
@@ -1415,8 +1487,17 @@ export default function BNGBlasterPage() {
                                                             return (
                                                                 <div key={c.id}
                                                                     onClick={() => canEdit && startEditConfig(c)}
-                                                                    className={`rounded-lg border p-3 transition-all ${canEdit ? 'cursor-pointer hover:border-indigo-400 hover:bg-indigo-500/5' : 'cursor-default'} ${editingCfg?.id === c.id ? 'border-indigo-500 bg-indigo-500/10 shadow-sm' : 'border-[var(--border-color)] bg-[var(--bg-card)]'}`}>
+                                                                    className={`rounded-lg border p-3 transition-all ${canEdit ? 'cursor-pointer hover:border-indigo-400 hover:bg-indigo-500/5' : 'cursor-default'} ${editingCfg?.id === c.id ? 'border-indigo-500 bg-indigo-500/10 shadow-sm' : 'border-[var(--border-color)] bg-[var(--bg-card)]'} ${selectedCfgIds.has(c.id) ? 'ring-1 ring-indigo-400' : ''}`}>
                                                                     <div className="flex items-start justify-between gap-2">
+                                                                        <div className="flex items-start gap-2 min-w-0">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={selectedCfgIds.has(c.id)}
+                                                                                onClick={e => e.stopPropagation()}
+                                                                                onChange={() => toggleCfgSelected(c.id)}
+                                                                                className="mt-1 shrink-0 rounded border-[var(--border-color)] text-indigo-500 focus:ring-indigo-400"
+                                                                                title="Select for bulk action"
+                                                                            />
                                                                         <div className="min-w-0">
                                                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                                                 <p className="text-sm font-semibold truncate">{c.name}</p>
@@ -1431,6 +1512,7 @@ export default function BNGBlasterPage() {
                                                                             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                                                                 {c.updated_at ? new Date(c.updated_at).toLocaleString() : '—'}
                                                                             </p>
+                                                                        </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-1.5 shrink-0">
                                                                             {canRun && (() => {
