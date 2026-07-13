@@ -5,6 +5,7 @@ Endpoints:
     PUT    /admin/settings/git          — save repo URL / branch / PAT
     POST   /admin/settings/git/test     — test connection (GitHub /user)
     POST   /admin/settings/git/backup   — push ALL configs to the repo
+    POST   /admin/settings/git/restore  — pull configs from the repo (skip existing names)
 """
 
 from __future__ import annotations
@@ -86,6 +87,57 @@ def _gh_headers(token: str) -> dict[str, str]:
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+
+
+async def _list_config_blobs(
+    client: httpx.AsyncClient,
+    owner: str,
+    repo: str,
+    branch: str,
+    token: str,
+) -> tuple[dict[str, str], bool]:
+    """List every blob under `configs/` in one recursive Git-tree call.
+
+    Return ({path: blob_sha}, truncated). truncated=True means the repo has more
+    files than GitHub returned in a single response (very large repos only).
+    An empty/unborn branch yields ({}, False) rather than an error.
+    """
+    r = await client.get(
+        f"{GITHUB_API}/repos/{owner}/{repo}/git/trees/{branch}",
+        headers=_gh_headers(token),
+        params={"recursive": "1"},
+    )
+    if r.status_code in (404, 409):  # 404 branch/repo missing, 409 empty repo
+        return {}, False
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"GitHub tree failed ({r.status_code}): {r.text[:200]}")
+    data = r.json()
+    paths = {
+        item["path"]: item["sha"]
+        for item in data.get("tree", [])
+        if item.get("type") == "blob" and str(item.get("path", "")).startswith("configs/")
+    }
+    return paths, bool(data.get("truncated"))
+
+
+async def _get_blob(
+    client: httpx.AsyncClient,
+    owner: str,
+    repo: str,
+    sha: str,
+    token: str,
+) -> str:
+    """Fetch a blob's decoded UTF-8 content by its git sha (robust to odd paths)."""
+    r = await client.get(
+        f"{GITHUB_API}/repos/{owner}/{repo}/git/blobs/{sha}",
+        headers=_gh_headers(token),
+    )
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail=f"GitHub blob failed ({r.status_code}): {r.text[:200]}")
+    meta = r.json()
+    if meta.get("encoding") == "base64" and meta.get("content"):
+        return base64.b64decode(meta["content"]).decode()
+    return str(meta.get("content", ""))
 
 
 # ── DTOs ──────────────────────────────────────────────────────────────────────
@@ -324,4 +376,93 @@ async def backup_configs_to_git(
         **counts,
         "details": results,
         "timestamp": timestamp,
+    }
+
+
+@router.post("/git/restore")
+async def restore_configs_from_git(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Pull saved configs from the Git repo and create any that don't exist locally.
+
+    For each `configs/{owner}/{name}.meta.json` sidecar we read the real config name,
+    description and owner, then pair it with the sibling `{name}.json` (config_json).
+    Config names are globally unique: a name that already exists in the DB is SKIPPED
+    (never overwritten). Restored configs keep their original owner when that username
+    still exists, otherwise they are assigned to the admin running the restore.
+    """
+    s = _get_or_create(db)
+    owner, repo, token, branch = _require_git_config(s)
+
+    # Global-unique names already present → skip candidates
+    existing = {row[0] for row in db.query(BNGConfig.name).all()}
+    # username → id, to restore original ownership where possible
+    user_map = {r.username: r.id for r in db.query(User.username, User.id).all()}
+
+    results: list[dict[str, Any]] = []
+    counts = {"restored": 0, "skipped": 0, "failed": 0}
+
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        paths, truncated = await _list_config_blobs(client, owner, repo, branch, token)
+        meta_paths = sorted(p for p in paths if p.endswith(".meta.json"))
+
+        for meta_path in meta_paths:
+            raw_path = meta_path[: -len(".meta.json")] + ".json"
+            name: str | None = None
+            try:
+                meta = json.loads(await _get_blob(client, owner, repo, paths[meta_path], token))
+                name = (meta.get("name") or "").strip()
+                if not name:
+                    raise HTTPException(status_code=422, detail=f"{meta_path} has no 'name'")
+                if raw_path not in paths:
+                    raise HTTPException(status_code=422, detail=f"missing config file {raw_path}")
+
+                if name in existing:
+                    counts["skipped"] += 1
+                    results.append({"name": name, "status": "skipped", "reason": "name already exists"})
+                    continue
+
+                config_json = json.loads(await _get_blob(client, owner, repo, paths[raw_path], token))
+
+                owner_username = str(meta.get("owner") or "")
+                assigned_to = owner_username if owner_username in user_map else current_user.username
+                db.add(
+                    BNGConfig(
+                        user_id=user_map.get(owner_username, current_user.id),
+                        name=name,
+                        description=meta.get("description") or None,
+                        config_json=config_json,
+                    )
+                )
+                existing.add(name)  # guard against duplicate names within this batch
+                counts["restored"] += 1
+                results.append(
+                    {
+                        "name": name,
+                        "owner": owner_username or "unknown",
+                        "assigned_to": assigned_to,
+                        "status": "restored",
+                    }
+                )
+            except (HTTPException, ValueError) as exc:  # ValueError covers JSON decode errors
+                counts["failed"] += 1
+                detail = exc.detail if isinstance(exc, HTTPException) else str(exc)
+                results.append(
+                    {
+                        "name": name or meta_path,
+                        "status": "failed",
+                        "error": str(detail)[:200],
+                    }
+                )
+
+    db.commit()
+
+    return {
+        "repo": f"{owner}/{repo}",
+        "branch": branch,
+        "total": len(meta_paths),
+        **counts,
+        "truncated": truncated,
+        "details": results,
     }
