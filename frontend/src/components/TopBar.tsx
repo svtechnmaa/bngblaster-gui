@@ -29,26 +29,29 @@ export default function TopBar() {
     };
 
     return (
-        <header className="glass-topbar sticky top-0 z-30 flex items-center justify-between px-5 py-2.5 border-b border-[var(--border-color)]">
-            {/* Brand */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center shadow">
-                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12h3l3-9 4 18 3-9h7" />
-                    </svg>
-                </div>
-                <div className="leading-tight hidden sm:block">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">BNGBlaster Web Client</p>
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Test &amp; Measurement</p>
-                </div>
-            </Link>
+        <header className="glass-topbar sticky top-0 z-30 flex items-center justify-between gap-4 px-5 py-2.5 border-b border-[var(--border-color)]">
+            {/* Brand + inline telemetry */}
+            <div className="flex items-center gap-3 min-w-0">
+                <Link to="/" className="flex items-center gap-2.5 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center shadow">
+                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12h3l3-9 4 18 3-9h7" />
+                        </svg>
+                    </div>
+                    <div className="leading-tight hidden sm:block">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">BNGBlaster Web Client</p>
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Test &amp; Measurement</p>
+                    </div>
+                </Link>
 
-            {/* Instrument telemetry rail — same row as the brand (console route only) */}
-            {showRail && (
-                <div className="flex-1 flex justify-center min-w-0 px-3">
-                    <InstrumentRail />
-                </div>
-            )}
+                {/* Inline telemetry — next to the brand (console route only) */}
+                {showRail && (
+                    <>
+                        <span className="hidden sm:block w-px h-7 bg-[var(--border-color)] shrink-0" />
+                        <InstrumentRail />
+                    </>
+                )}
+            </div>
 
             {/* User */}
             <div className="relative shrink-0" ref={menuRef}>

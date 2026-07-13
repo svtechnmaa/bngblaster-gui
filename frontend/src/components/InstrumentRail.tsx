@@ -1,10 +1,9 @@
-/** Instrument status rail — a measurement-instrument faceplate for the TopBar.
+/** Inline telemetry readouts for the TopBar (next to the brand).
  *
- * LED link/traffic lamps + live monospace telemetry (controller, instances,
- * TX/RX pps, LIVE/IDLE). Theme-aware via the `.instrument-rail` tokens in
- * index.css (light faceplate in light mode, dark faceplate in dark). Readouts
- * collapse from the right as width shrinks; LEDs + state pill always show.
- * Motion is gated by prefers-reduced-motion.
+ * No box/faceplate — the stats sit directly on the top bar surface and blend
+ * with the theme: a status LED, monospace controller/instance readouts, live
+ * TX/RX (warm/cool) and a LIVE/IDLE pill. Readouts collapse by breakpoint; the
+ * pill always stays. Motion gated by prefers-reduced-motion.
  */
 
 import { useTelemetryStore } from '../store/useTelemetryStore';
@@ -15,36 +14,17 @@ function fmtPps(n: number) {
     return String(n);
 }
 
-function Led({ on, pulse = false, label }: { on: boolean; pulse?: boolean; label: string }) {
+function Stat({ label, value, tone, className = '' }: { label: string; value: string; tone?: 'tx' | 'rx'; className?: string }) {
+    const color = tone === 'tx'
+        ? 'text-orange-600 dark:text-orange-400'
+        : tone === 'rx'
+        ? 'text-cyan-600 dark:text-cyan-400'
+        : 'text-[var(--text-primary)]';
     return (
-        <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.12em]" style={{ color: 'var(--ir-label)' }}>
-            <span
-                className={`w-2 h-2 rounded-full ${pulse ? 'motion-safe:animate-pulse' : ''}`}
-                style={{
-                    background: on ? '#34d399' : 'var(--ir-led-off)',
-                    boxShadow: on ? '0 0 7px 1px rgba(52,211,153,0.85)' : 'inset 0 0 0 1px rgba(128,128,128,0.25)',
-                }}
-            />
-            {label}
-        </div>
-    );
-}
-
-function Readout({ label, value, unit, tone, title, className = '' }: {
-    label: string; value: string; unit?: string; tone?: 'tx' | 'rx'; title?: string; className?: string;
-}) {
-    const color = tone === 'tx' ? 'var(--ir-tx)' : tone === 'rx' ? 'var(--ir-rx)' : 'var(--ir-value)';
-    return (
-        <div
-            className={`flex-col justify-center gap-0.5 px-3.5 py-1.5 whitespace-nowrap border-l ${className}`}
-            style={{ borderColor: 'var(--ir-divider)' }}
-            title={title}
-        >
-            <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--ir-label)' }}>{label}</span>
-            <span className="flex items-baseline gap-1 font-mono tabular-nums text-[13px] font-semibold leading-none" style={{ color }}>
-                {value}{unit && <span className="text-[9px] font-semibold" style={{ color: 'var(--ir-unit)' }}>{unit}</span>}
-            </span>
-        </div>
+        <span className={`items-baseline gap-1 ${className}`}>
+            <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]">{label}</span>
+            <span className={`font-mono tabular-nums text-xs font-semibold ${color}`}>{value}</span>
+        </span>
     );
 }
 
@@ -56,27 +36,24 @@ export default function InstrumentRail() {
     return (
         <div
             role="status"
-            aria-label={`Instrument status: controller ${t.server ? t.server.name : 'none'}, ${t.running} of ${t.total} instances running, ${state}`}
-            className="instrument-rail flex items-stretch rounded-lg overflow-x-auto max-w-full"
+            aria-label={`Controller ${t.server ? t.server.name : 'none'}, ${t.running} of ${t.total} instances running, ${state}`}
+            className="flex items-center gap-3 min-w-0"
         >
-            <div className="flex flex-col justify-center gap-1 px-3 py-1.5">
-                <Led on={!!t.server} label="Ctrl" />
-                <Led on={t.running > 0} pulse={t.running > 0} label="Traffic" />
-            </div>
-            <Readout className="hidden lg:flex" label="Controller" value={t.server ? t.server.name : '—'} unit={t.server ? `:${t.server.port}` : undefined} title={t.server ? `${t.server.host}:${t.server.port}` : 'No server selected'} />
-            <Readout className="hidden sm:flex" label="Instances" value={String(t.running)} unit={`/ ${t.total} up`} />
-            <Readout className="hidden xl:flex" label="TX rate" value={t.hasLive ? fmtPps(t.txPps) : '—'} unit="pps" tone="tx" />
-            <Readout className="hidden xl:flex" label="RX rate" value={t.hasLive ? fmtPps(t.rxPps) : '—'} unit="pps" tone="rx" />
-            <div className="flex items-center px-3 border-l" style={{ borderColor: 'var(--ir-divider)' }}>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-[0.14em] border ${
-                    idle
-                        ? 'bg-slate-400/15 text-slate-500 dark:text-slate-300 border-slate-400/30'
-                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 border-emerald-400/40'
-                }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-400 motion-safe:animate-pulse'}`} />
-                    {state}
-                </span>
-            </div>
+            {/* Controller link + name */}
+            <span className="hidden md:flex items-center gap-1.5 min-w-0" title={t.server ? `${t.server.host}:${t.server.port}` : 'No server selected'}>
+                <span className={`w-2 h-2 rounded-full shrink-0 ${t.server ? 'bg-emerald-500 shadow-[0_0_6px_1px_rgba(16,185,129,0.7)]' : 'bg-slate-300 dark:bg-slate-600'}`} />
+                <span className="font-mono text-xs text-[var(--text-primary)] truncate">{t.server ? t.server.name : '—'}</span>
+                {t.server && <span className="font-mono text-[10px] text-[var(--text-muted)] shrink-0">:{t.server.port}</span>}
+            </span>
+
+            <Stat className="hidden sm:flex" label="Inst" value={`${t.running}/${t.total}`} />
+            {t.hasLive && <Stat className="hidden lg:flex" label="TX" value={fmtPps(t.txPps)} tone="tx" />}
+            {t.hasLive && <Stat className="hidden lg:flex" label="RX" value={fmtPps(t.rxPps)} tone="rx" />}
+
+            <span className={`inline-flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[0.14em] ${idle ? 'text-[var(--text-muted)]' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${idle ? 'bg-slate-400' : 'bg-emerald-500 motion-safe:animate-pulse'}`} />
+                {state}
+            </span>
         </div>
     );
 }
