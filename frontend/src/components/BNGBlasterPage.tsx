@@ -934,6 +934,22 @@ export default function BNGBlasterPage() {
 
     useEffect(() => () => stopMonitoring(), [stopMonitoring]);
 
+    // Escape-to-close for fullscreen stats table modal
+    useEffect(() => {
+        if (!fullscreenTable) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreenTable(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [fullscreenTable]);
+
+    // Escape-to-close for topology preview modal
+    useEffect(() => {
+        if (!topologyModalCfg) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTopologyModalCfg(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [topologyModalCfg]);
+
     // Auto-scroll log to bottom whenever new log content is loaded
     useEffect(() => {
         if (logPreRef.current && logText) {
@@ -1529,7 +1545,7 @@ export default function BNGBlasterPage() {
                                                                 className="text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors cursor-pointer"
                                                                 style={on
                                                                     ? { background: `hsl(${hue} 65% 45%)`, color: '#fff', borderColor: `hsl(${hue} 65% 45%)` }
-                                                                    : { background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 55% 45%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                                    : { background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 65% 38%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
                                                             >{t}</button>
                                                         );
                                                     })}
@@ -1663,7 +1679,7 @@ export default function BNGBlasterPage() {
                                                                                                 type="button"
                                                                                                 onClick={e => { e.stopPropagation(); toggleTag(t); }}
                                                                                                 className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border cursor-pointer"
-                                                                                                style={{ background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 55% 45%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                                                                style={{ background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 65% 38%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
                                                                                                 title={`Filter by tag ${t}`}
                                                                                             >{t}</button>
                                                                                         );
@@ -1936,7 +1952,7 @@ export default function BNGBlasterPage() {
                                 {!selServer ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-8">Select a BNG server above.</p>
                                 ) : loadingInstances ? (
-                                    <p className="text-sm text-[var(--text-muted)] text-center py-8">Loading instances…</p>
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-8"><span className="flex items-center justify-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading instances…</span></p>
                                 ) : allInstances.length === 0 ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-8">No instances found on this server.</p>
                                 ) : (() => {
@@ -1944,9 +1960,13 @@ export default function BNGBlasterPage() {
                                         .filter(i => instFilter === 'all' || i.status === 'started')
                                         .filter(i => !instSearch.trim() || i.name.toLowerCase().includes(instSearch.toLowerCase()));
                                     return filtered.length === 0 ? (
-                                        <p className="text-sm text-[var(--text-muted)] text-center py-8">
-                                            {instFilter === 'running' ? 'No running instances.' : 'No instances match the filter.'}
-                                        </p>
+                                        <div className="flex flex-col items-center gap-2 text-center py-8">
+                                            <ServerIcon className="w-8 h-8 text-[var(--text-muted)] opacity-40" />
+                                            <p className="text-sm text-[var(--text-muted)]">
+                                                {instFilter === 'running' ? 'No running instances.' : 'No instances match the filter.'}
+                                            </p>
+                                            <p className="text-xs text-[var(--text-muted)] opacity-70">Start a config from the Configs tab.</p>
+                                        </div>
                                     ) : (
                                     <div className="divide-y divide-[var(--border-color)]">
                                         {filtered.map(inst => {
@@ -2038,7 +2058,7 @@ export default function BNGBlasterPage() {
                                                         <div className="px-4 pb-3 border-t border-dashed border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                             <p className="text-[10px] text-[var(--text-muted)] py-2 font-semibold uppercase tracking-wide">config.json — {inst.name}</p>
                                                             {viewConfigLoading
-                                                                ? <p className="text-xs text-gray-400 py-2">Loading…</p>
+                                                                ? <p className="text-xs text-gray-400 py-2"><span className="flex items-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading…</span></p>
                                                                 : <ResizableEditorBox defaultHeight={208} min={100}>
                                                                     <Editor height="100%" theme="vs-dark" language="json" value={viewConfigJson}
                                                                         options={{ readOnly: true, minimap: { enabled: false }, fontSize: 11, scrollBeyondLastLine: false }} />
@@ -2512,11 +2532,14 @@ export default function BNGBlasterPage() {
                                 {!selServer ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-6">Select a server in the <strong>Run &amp; Monitor</strong> tab first.</p>
                                 ) : loadingInstances ? (
-                                    <p className="text-sm text-[var(--text-muted)] text-center py-6">Loading…</p>
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-6"><span className="flex items-center justify-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading…</span></p>
                                 ) : (() => {
                                     const rptFiltered = allInstances.filter(i => instFilter === 'all' || i.status === 'started');
                                     return rptFiltered.length === 0 ? (
-                                        <p className="text-sm text-[var(--text-muted)] text-center py-6">{instFilter === 'running' ? 'No running instances.' : 'No instances.'}</p>
+                                        <div className="flex flex-col items-center gap-2 text-center py-6">
+                                            <ChartBarIcon className="w-8 h-8 text-[var(--text-muted)] opacity-40" />
+                                            <p className="text-sm text-[var(--text-muted)]">{instFilter === 'running' ? 'No running instances.' : 'No instances.'}</p>
+                                        </div>
                                     ) : (
                                         <div className="divide-y divide-[var(--border-color)]">
                                             {rptFiltered.map(inst => {
@@ -2632,7 +2655,7 @@ export default function BNGBlasterPage() {
         {/* ── Fullscreen Table Modal (portal → bypasses stacking context) ── */}
         {fullscreenTable && createPortal(
             <div className="fixed inset-0 z-[9999] bg-black/60 flex items-start justify-center p-4 overflow-auto" onClick={() => setFullscreenTable(null)}>
-                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-7xl mt-8" onClick={e => e.stopPropagation()}>
+                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-7xl mt-8" role="dialog" aria-modal="true" aria-label="Statistics table" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
                         <h3 className="text-sm font-bold text-[var(--text-primary)]">
                             {fullscreenTable === 'network' ? 'Network Interfaces' : fullscreenTable === 'access' ? 'Access Interfaces' : 'Stream Statistics'}
@@ -2740,7 +2763,7 @@ export default function BNGBlasterPage() {
         {/* Topology preview modal (from Configs tab) */}
         {topologyModalCfg && createPortal(
             <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => setTopologyModalCfg(null)}>
-                <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-label="Topology preview" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <div className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-semibold">Topology preview</div>
