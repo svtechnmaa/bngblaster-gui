@@ -45,7 +45,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     return (
         <div className="min-h-screen flex flex-col bg-[var(--bg-primary)]">
             <TopBar />
-            <main className="flex-1 overflow-y-auto max-w-[1600px] mx-auto w-full px-2">{children}</main>
+            <main className="flex-1 overflow-y-auto max-w-[1600px] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4">{children}</main>
         </div>
     );
 }
