@@ -373,6 +373,20 @@ textarea.form-input { resize: vertical; }
   box-shadow: 0 0 0 3px rgba(34,211,238,0.15);
 }
 
+/* Make the browser render native controls (incl. the <select> option popup,
+   date pickers, scrollbars) in the active theme — fixes white-on-white option
+   lists in dark mode. */
+:root { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+
+/* Belt-and-suspenders: give <option> rows an opaque themed background so the
+   dropdown list is readable even where color-scheme isn't honored. */
+select option,
+select optgroup {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
 /* ══════════════════════════════════════════════════════════
    Badges
    ══════════════════════════════════════════════════════════ */
