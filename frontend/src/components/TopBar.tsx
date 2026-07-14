@@ -1,16 +1,23 @@
 /** Minimal top bar — branding + user menu (no sidebar). */
 
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { MoonIcon, SunIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/useAuthStore';
+import { useThemeStore } from '../store/useThemeStore';
 import { can, type Role } from '../utils/permissions';
+import InstrumentRail from './InstrumentRail';
 
 export default function TopBar() {
     const { user, logout } = useAuthStore();
+    const theme = useThemeStore(s => s.theme);
+    const toggleTheme = useThemeStore(s => s.toggle);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
+    const { pathname } = useLocation();
     const role = (user?.role || 'viewer') as Role;
+    const showRail = pathname === '/';
 
     useEffect(() => {
         const onClick = (e: MouseEvent) => {
@@ -26,19 +33,40 @@ export default function TopBar() {
     };
 
     return (
-        <header className="glass-topbar sticky top-0 z-30 flex items-center justify-between px-5 py-2.5 border-b border-[var(--border-color)]">
-            {/* Brand */}
-            <Link to="/" className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center shadow">
-                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M2 12h3l3-9 4 18 3-9h7" />
-                    </svg>
-                </div>
-                <div className="leading-tight">
-                    <p className="text-sm font-semibold text-[var(--text-primary)]">BNGBlaster Web Client</p>
-                    <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Test &amp; Measurement</p>
-                </div>
-            </Link>
+        <header className="glass-topbar sticky top-0 z-30 flex items-center justify-between gap-4 px-5 py-2.5 border-b border-[var(--border-color)]">
+            {/* Brand + inline telemetry */}
+            <div className="flex items-center gap-3 min-w-0">
+                <Link to="/" className="flex items-center gap-2.5 shrink-0">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-400 flex items-center justify-center shadow">
+                        <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M2 12h3l3-9 4 18 3-9h7" />
+                        </svg>
+                    </div>
+                    <div className="leading-tight hidden sm:block">
+                        <p className="text-sm font-semibold text-[var(--text-primary)]">BNGBlaster Web Client</p>
+                        <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider">Test &amp; Measurement</p>
+                    </div>
+                </Link>
+
+                {/* Inline telemetry — next to the brand (console route only) */}
+                {showRail && (
+                    <>
+                        <span className="hidden sm:block w-px h-7 bg-[var(--border-color)] shrink-0" />
+                        <InstrumentRail />
+                    </>
+                )}
+            </div>
+
+            {/* Right: theme toggle + user */}
+            <div className="flex items-center gap-1 shrink-0">
+            <button
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
+            >
+                {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+            </button>
 
             {/* User */}
             <div className="relative" ref={menuRef}>
@@ -91,6 +119,7 @@ export default function TopBar() {
                         </button>
                     </div>
                 )}
+            </div>
             </div>
         </header>
     );

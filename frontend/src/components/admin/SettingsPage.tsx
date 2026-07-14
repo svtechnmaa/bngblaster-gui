@@ -10,7 +10,9 @@ import {
     ExclamationTriangleIcon, KeyIcon, LinkIcon,
 } from '@heroicons/react/24/outline';
 
+import { toast } from 'sonner';
 import api from '../../services/api';
+import { confirmDialog } from '../../store/useConfirmStore';
 
 interface GitSettings {
     git_repo_url: string;
@@ -51,7 +53,6 @@ export default function SettingsPage() {
     const [testing, setTesting] = useState(false);
     const [backing, setBacking] = useState(false);
     const [restoring, setRestoring] = useState(false);
-    const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
     const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
     const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
 
@@ -62,12 +63,12 @@ export default function SettingsPage() {
                 setRepoUrl(r.data.git_repo_url || '');
                 setBranch(r.data.git_branch || 'main');
             })
-            .catch(e => setMsg({ type: 'err', text: e.response?.data?.detail || 'Failed to load settings' }));
+            .catch(e => toast.error(e.response?.data?.detail || 'Failed to load settings'));
     }, []);
 
-    const showMsg = (type: 'ok' | 'err', text: string, ms = 5000) => {
-        setMsg({ type, text });
-        setTimeout(() => setMsg(null), ms);
+    const showMsg = (type: 'ok' | 'err', text: string) => {
+        if (type === 'ok') toast.success(text);
+        else toast.error(text);
     };
 
     const handleSave = async () => {
@@ -102,7 +103,7 @@ export default function SettingsPage() {
     };
 
     const handleBackup = async () => {
-        if (!confirm('Backup ALL configs (from every user) to the configured Git repo?')) return;
+        if (!(await confirmDialog({ title: 'Back up all configs', message: 'Back up ALL configs (from every user) to the configured Git repo?', confirmLabel: 'Back up' }))) return;
         setBacking(true);
         setBackupResult(null);
         try {
@@ -117,7 +118,7 @@ export default function SettingsPage() {
     };
 
     const handleRestore = async () => {
-        if (!confirm('Restore configs from the Git repo? Existing configs (same name) are left untouched; only missing ones are created.')) return;
+        if (!(await confirmDialog({ title: 'Restore from Git', message: 'Restore configs from the Git repo?\nExisting configs (same name) are left untouched; only missing ones are created.', confirmLabel: 'Restore' }))) return;
         setRestoring(true);
         setRestoreResult(null);
         try {
@@ -220,7 +221,7 @@ export default function SettingsPage() {
                         <button
                             onClick={handleRestore}
                             disabled={restoring || !settings?.git_token_set}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-600 text-cyan-700 hover:bg-cyan-50 text-sm font-medium disabled:opacity-50"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-cyan-600 text-cyan-700 hover:bg-cyan-500/10 text-sm font-medium disabled:opacity-50"
                             title={!settings?.git_token_set ? 'Save a PAT first' : 'Create configs missing locally from Git (existing names are skipped)'}
                         >
                             {restoring ? <ArrowPathIcon className="w-4 h-4 animate-spin" /> : <CloudArrowDownIcon className="w-4 h-4" />}
@@ -228,16 +229,6 @@ export default function SettingsPage() {
                         </button>
                     </div>
 
-                    {msg && (
-                        <div className={`text-xs flex items-start gap-1.5 p-2 rounded border ${
-                            msg.type === 'ok'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                : 'bg-red-50 border-red-200 text-red-700'
-                        }`}>
-                            {msg.type === 'ok' ? <CheckCircleIcon className="w-4 h-4 shrink-0" /> : <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />}
-                            <span>{msg.text}</span>
-                        </div>
-                    )}
                 </div>
             </section>
 
@@ -246,21 +237,21 @@ export default function SettingsPage() {
                 <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 shadow-[var(--shadow-sm)]">
                     <h3 className="text-sm font-semibold mb-3">Last backup result</h3>
                     <div className="grid grid-cols-4 gap-3 text-center mb-3">
-                        <div className="p-2 rounded bg-emerald-50 border border-emerald-200">
-                            <div className="text-xs text-emerald-600">Created</div>
-                            <div className="text-lg font-semibold text-emerald-700">{backupResult.created}</div>
+                        <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400">Created</div>
+                            <div className="text-lg font-semibold text-emerald-600 dark:text-emerald-300">{backupResult.created}</div>
                         </div>
-                        <div className="p-2 rounded bg-blue-50 border border-blue-200">
-                            <div className="text-xs text-blue-600">Updated</div>
-                            <div className="text-lg font-semibold text-blue-700">{backupResult.updated}</div>
+                        <div className="p-2 rounded bg-[var(--bg-hover)] border border-[var(--border-color)]">
+                            <div className="text-xs text-[var(--text-muted)]">Updated</div>
+                            <div className="text-lg font-semibold text-[var(--text-primary)]">{backupResult.updated}</div>
                         </div>
-                        <div className="p-2 rounded bg-slate-50 border border-slate-200">
-                            <div className="text-xs text-slate-600">Unchanged</div>
-                            <div className="text-lg font-semibold text-slate-700">{backupResult.unchanged}</div>
+                        <div className="p-2 rounded bg-[var(--bg-hover)] border border-[var(--border-color)]">
+                            <div className="text-xs text-[var(--text-muted)]">Unchanged</div>
+                            <div className="text-lg font-semibold text-[var(--text-primary)]">{backupResult.unchanged}</div>
                         </div>
-                        <div className={`p-2 rounded ${backupResult.failed ? 'bg-red-50 border border-red-200' : 'bg-slate-50 border border-slate-200'}`}>
-                            <div className={`text-xs ${backupResult.failed ? 'text-red-600' : 'text-slate-600'}`}>Failed</div>
-                            <div className={`text-lg font-semibold ${backupResult.failed ? 'text-red-700' : 'text-slate-700'}`}>{backupResult.failed}</div>
+                        <div className={`p-2 rounded ${backupResult.failed ? 'bg-red-500/10 border border-red-500/30' : 'bg-[var(--bg-hover)] border border-[var(--border-color)]'}`}>
+                            <div className={`text-xs ${backupResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-muted)]'}`}>Failed</div>
+                            <div className={`text-lg font-semibold ${backupResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-primary)]'}`}>{backupResult.failed}</div>
                         </div>
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mb-2">
@@ -298,17 +289,17 @@ export default function SettingsPage() {
                 <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 shadow-[var(--shadow-sm)]">
                     <h3 className="text-sm font-semibold mb-3">Last restore result</h3>
                     <div className="grid grid-cols-3 gap-3 text-center mb-3">
-                        <div className="p-2 rounded bg-emerald-50 border border-emerald-200">
-                            <div className="text-xs text-emerald-600">Restored</div>
-                            <div className="text-lg font-semibold text-emerald-700">{restoreResult.restored}</div>
+                        <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
+                            <div className="text-xs text-emerald-600 dark:text-emerald-400">Restored</div>
+                            <div className="text-lg font-semibold text-emerald-600 dark:text-emerald-300">{restoreResult.restored}</div>
                         </div>
-                        <div className="p-2 rounded bg-slate-50 border border-slate-200">
-                            <div className="text-xs text-slate-600">Skipped</div>
-                            <div className="text-lg font-semibold text-slate-700">{restoreResult.skipped}</div>
+                        <div className="p-2 rounded bg-[var(--bg-hover)] border border-[var(--border-color)]">
+                            <div className="text-xs text-[var(--text-muted)]">Skipped</div>
+                            <div className="text-lg font-semibold text-[var(--text-primary)]">{restoreResult.skipped}</div>
                         </div>
-                        <div className={`p-2 rounded ${restoreResult.failed ? 'bg-red-50 border border-red-200' : 'bg-slate-50 border border-slate-200'}`}>
-                            <div className={`text-xs ${restoreResult.failed ? 'text-red-600' : 'text-slate-600'}`}>Failed</div>
-                            <div className={`text-lg font-semibold ${restoreResult.failed ? 'text-red-700' : 'text-slate-700'}`}>{restoreResult.failed}</div>
+                        <div className={`p-2 rounded ${restoreResult.failed ? 'bg-red-500/10 border border-red-500/30' : 'bg-[var(--bg-hover)] border border-[var(--border-color)]'}`}>
+                            <div className={`text-xs ${restoreResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-muted)]'}`}>Failed</div>
+                            <div className={`text-lg font-semibold ${restoreResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-primary)]'}`}>{restoreResult.failed}</div>
                         </div>
                     </div>
                     <p className="text-xs text-[var(--text-muted)] mb-2">

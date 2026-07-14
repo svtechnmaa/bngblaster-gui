@@ -56,3 +56,6 @@ def init_db():
             ("avatar_url", "VARCHAR(512)"),
         ]:
             conn.execute(text(f"ALTER TABLE users ADD COLUMN IF NOT EXISTS {col} {typ}"))
+        conn.execute(text(
+            "ALTER TABLE bng_configs ADD COLUMN IF NOT EXISTS tags JSONB NOT NULL DEFAULT '[]'::jsonb"
+        ))

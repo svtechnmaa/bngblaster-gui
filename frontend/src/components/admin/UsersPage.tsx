@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../services/api';
+import { confirmDialog } from '../../store/useConfirmStore';
 
 interface User {
     id: number;
@@ -40,7 +41,7 @@ export default function UsersPage() {
     };
 
     const deleteUser = async (id: number, username: string) => {
-        if (!confirm(`Delete user "${username}"?`)) return;
+        if (!(await confirmDialog({ title: 'Delete user', message: `Delete user "${username}"? This cannot be undone.`, confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/auth/users/${id}`);
             toast.success('User deleted');
@@ -69,45 +70,47 @@ export default function UsersPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-[var(--bg-hover)] text-xs uppercase tracking-wider text-[var(--text-muted)]">
                             <tr>
-                                <th className="text-left px-4 py-2.5">Username</th>
-                                <th className="text-left px-4 py-2.5">Full Name</th>
-                                <th className="text-left px-4 py-2.5">Email</th>
-                                <th className="text-left px-4 py-2.5">Provider</th>
-                                <th className="text-left px-4 py-2.5">Role</th>
-                                <th className="text-left px-4 py-2.5">Active</th>
-                                <th className="px-4 py-2.5"></th>
+                                <th className="text-left px-5 py-3">Username</th>
+                                <th className="text-left px-5 py-3">Full Name</th>
+                                <th className="text-left px-5 py-3">Email</th>
+                                <th className="text-left px-5 py-3">Provider</th>
+                                <th className="text-left px-5 py-3">Role</th>
+                                <th className="text-left px-5 py-3">Active</th>
+                                <th className="px-5 py-3"></th>
                             </tr>
                         </thead>
                         <tbody>
                             {users.map(u => (
                                 <tr key={u.id} className="border-t border-[var(--border-color)]">
-                                    <td className="px-4 py-2.5 font-medium text-[var(--text-primary)]">{u.username}</td>
-                                    <td className="px-4 py-2.5 text-[var(--text-secondary)]">{u.full_name || '—'}</td>
-                                    <td className="px-4 py-2.5 text-[var(--text-secondary)]">{u.email || '—'}</td>
-                                    <td className="px-4 py-2.5">
-                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 uppercase">
+                                    <td className="px-5 py-3 font-medium text-[var(--text-primary)]">{u.username}</td>
+                                    <td className="px-5 py-3 text-[var(--text-secondary)]">{u.full_name || '—'}</td>
+                                    <td className="px-5 py-3 text-[var(--text-secondary)]">{u.email || '—'}</td>
+                                    <td className="px-5 py-3">
+                                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--bg-hover)] text-[var(--text-secondary)] uppercase">
                                             {u.auth_provider}
                                         </span>
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-5 py-3">
                                         <select
                                             value={u.role}
                                             onChange={e => updateUser(u.id, { role: e.target.value })}
                                             className="input-field text-xs py-1"
                                             disabled={u.username === 'admin'}
+                                            aria-label={`Role for ${u.username}`}
                                         >
                                             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                                         </select>
                                     </td>
-                                    <td className="px-4 py-2.5">
+                                    <td className="px-5 py-3">
                                         <input
                                             type="checkbox"
                                             checked={!!u.is_active}
                                             disabled={u.username === 'admin'}
                                             onChange={e => updateUser(u.id, { is_active: e.target.checked ? 1 : 0 })}
+                                            aria-label={`Active: ${u.username}`}
                                         />
                                     </td>
-                                    <td className="px-4 py-2.5 text-right">
+                                    <td className="px-5 py-3 text-right">
                                         {u.username !== 'admin' && (
                                             <button
                                                 onClick={() => deleteUser(u.id, u.username)}
@@ -153,13 +156,13 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
             <div className="glass-card w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
                 <h2 className="text-base font-semibold mb-4 text-[var(--text-primary)]">Create User</h2>
                 <div className="space-y-3">
-                    <input className="input-field" placeholder="Username *" value={data.username}
+                    <input className="input-field" placeholder="Username *" aria-label="Username" value={data.username}
                         onChange={e => setData({ ...data, username: e.target.value })} />
-                    <input className="input-field" type="password" placeholder="Password *" value={data.password}
+                    <input className="input-field" type="password" placeholder="Password *" aria-label="Password" value={data.password}
                         onChange={e => setData({ ...data, password: e.target.value })} />
-                    <input className="input-field" placeholder="Email" value={data.email}
+                    <input className="input-field" placeholder="Email" aria-label="Email" value={data.email}
                         onChange={e => setData({ ...data, email: e.target.value })} />
-                    <input className="input-field" placeholder="Full name" value={data.full_name}
+                    <input className="input-field" placeholder="Full name" aria-label="Full name" value={data.full_name}
                         onChange={e => setData({ ...data, full_name: e.target.value })} />
                     <select className="input-field" value={data.role}
                         onChange={e => setData({ ...data, role: e.target.value })}>

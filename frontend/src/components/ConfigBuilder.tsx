@@ -118,10 +118,10 @@ function LeafField({ fieldKey, schema, value, onChange, path }: {
 
     return (
         <div className={`rounded-lg border transition-all ${
-            checked ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white hover:border-gray-300'
+            checked ? 'border-orange-300 bg-orange-50 dark:bg-orange-500/10' : 'border-[var(--border-color)] bg-[var(--bg-card)] hover:border-[var(--border-color)]'
         }`}>
             {/* Checkbox row */}
-            <label className="flex items-center gap-2 px-2.5 py-1.5 cursor-pointer select-none">
+            <label className="flex items-center gap-2 px-3 py-2 cursor-pointer select-none">
                 <input
                     type="checkbox"
                     checked={checked}
@@ -129,8 +129,8 @@ function LeafField({ fieldKey, schema, value, onChange, path }: {
                     className="accent-orange-500 w-3.5 h-3.5 shrink-0 cursor-pointer"
                 />
                 <span
-                    className={`text-[10px] font-semibold uppercase tracking-wide truncate ${
-                        checked ? 'text-orange-700' : 'text-gray-400'
+                    className={`text-xs font-semibold uppercase tracking-wide truncate ${
+                        checked ? 'text-orange-700 dark:text-orange-400' : 'text-[var(--text-muted)]'
                     }`}
                     title={fieldKey}
                 >
@@ -140,7 +140,7 @@ function LeafField({ fieldKey, schema, value, onChange, path }: {
 
             {/* Widget — shown only when checked */}
             {checked && (
-                <div className="px-2.5 pb-2">
+                <div className="px-3 pb-3">
                     {widget === 'selectbox' && Array.isArray(opts) && (
                         <select
                             className="input-field text-xs py-1 w-full"
@@ -179,7 +179,7 @@ function LeafField({ fieldKey, schema, value, onChange, path }: {
                                 step={1}
                                 onChange={e => onChange(parseInt(e.target.value))}
                             />
-                            <span className="text-xs text-gray-600 w-8 text-right shrink-0 font-mono">{value}</span>
+                            <span className="text-xs text-[var(--text-muted)] w-8 text-right shrink-0 font-mono">{value}</span>
                         </div>
                     )}
 
@@ -224,9 +224,9 @@ function ObjectFields({ schema, value, onChange, basePath, depth = 0 }: {
         <div className="space-y-3">
             {/* Leaf fields grid */}
             {leaves.length > 0 && (
-                <div className={`grid gap-2 ${
+                <div className={`grid gap-3 ${
                     depth === 0
-                        ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+                        ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-3'
                         : 'grid-cols-2 md:grid-cols-3'
                 }`}>
                     {leaves.map(([k, s]) => (
@@ -278,16 +278,16 @@ function CollapsibleSection({ label, children, defaultOpen = true }: {
 }) {
     const [open, setOpen] = useState(defaultOpen);
     return (
-        <div className="border border-gray-200 rounded-lg overflow-hidden">
+        <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
             <button
                 onClick={() => setOpen(o => !o)}
-                className="w-full flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 bg-[var(--bg-hover)] hover:bg-[var(--bg-hover)] transition-colors text-left"
             >
                 {open
-                    ? <ChevronDownIcon  className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    : <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    ? <ChevronDownIcon  className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
+                    : <ChevronRightIcon className="w-3.5 h-3.5 text-[var(--text-muted)] shrink-0" />
                 }
-                <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{label}</span>
+                <span className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wide">{label}</span>
             </button>
             {open && <div className="p-3">{children}</div>}
         </div>
@@ -314,43 +314,45 @@ function ListSection({ label, itemSchema, basePath, items, onChange, depth }: {
     const checkedCount = countEnabled(basePath, enabledFields);
 
     return (
-        <div className="border border-blue-200 rounded-lg overflow-hidden">
+        <div className="border border-cyan-500/25 rounded-lg overflow-hidden">
             <div
-                className="flex items-center justify-between bg-blue-50 px-3 py-2 cursor-pointer select-none"
+                className="flex items-center justify-between bg-cyan-500/10 px-4 py-2.5 cursor-pointer select-none"
                 onClick={() => setCollapsed(c => !c)}
             >
                 <div className="flex items-center gap-2">
                     {collapsed
-                        ? <ChevronRightIcon className="w-3.5 h-3.5 text-blue-500" />
-                        : <ChevronDownIcon  className="w-3.5 h-3.5 text-blue-500" />
+                        ? <ChevronRightIcon className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
+                        : <ChevronDownIcon  className="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" />
                     }
-                    <span className="text-xs font-semibold text-blue-700 uppercase tracking-wide">{label}</span>
-                    <span className="text-[10px] bg-blue-200 text-blue-700 px-1.5 py-0.5 rounded-full font-bold">
+                    <span className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">{label}</span>
+                    <span className="text-xs bg-cyan-500/20 text-cyan-700 dark:text-cyan-300 px-1.5 py-0.5 rounded-full font-bold">
                         {items.length}
                     </span>
                     {checkedCount > 0 && (
-                        <span className="text-[10px] bg-orange-200 text-orange-700 px-1.5 py-0.5 rounded-full font-bold">
+                        <span className="text-xs bg-orange-200 dark:bg-orange-500/20 text-orange-700 dark:text-orange-300 px-1.5 py-0.5 rounded-full font-bold">
                             {checkedCount} fields on
                         </span>
                     )}
                 </div>
                 <button
                     onClick={e => { e.stopPropagation(); addItem(); }}
-                    className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                    className="flex items-center gap-1 text-xs text-cyan-600 hover:text-cyan-700 font-medium"
                 >
                     <PlusIcon className="w-3.5 h-3.5" /> Add
                 </button>
             </div>
 
             {!collapsed && items.map((item, idx) => (
-                <div key={idx} className="border-t border-blue-100 p-3">
+                <div key={idx} className="border-t border-[var(--border-color)] p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                        <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">
                             {label} #{idx + 1}
                         </span>
                         <button
                             onClick={() => removeItem(idx)}
                             className="text-red-400 hover:text-red-600 transition-colors"
+                            aria-label="Remove item"
+                            title="Remove item"
                         >
                             <TrashIcon className="w-3.5 h-3.5" />
                         </button>
@@ -366,10 +368,10 @@ function ListSection({ label, itemSchema, basePath, items, onChange, depth }: {
             ))}
 
             {!collapsed && items.length === 0 && (
-                <div className="border-t border-blue-100 p-3 text-center">
+                <div className="border-t border-[var(--border-color)] p-4 text-center">
                     <button
                         onClick={addItem}
-                        className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1 mx-auto"
+                        className="text-xs text-cyan-600 hover:text-cyan-700 flex items-center gap-1 mx-auto"
                     >
                         <PlusIcon className="w-3.5 h-3.5" /> Add first item
                     </button>
@@ -485,8 +487,8 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
     const previewStr = JSON.stringify(buildJson(), null, 2);
 
     if (loading) return (
-        <div className="flex items-center gap-2 text-sm text-gray-500 p-6 justify-center">
-            <svg className="animate-spin w-4 h-4 text-orange-500" fill="none" viewBox="0 0 24 24">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)] p-6 justify-center">
+            <svg className="animate-spin w-4 h-4 text-cyan-600" fill="none" viewBox="0 0 24 24" role="status" aria-label="Loading">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
@@ -495,7 +497,7 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
     );
 
     if (error) return (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-600 dark:text-red-400">{error}</div>
     );
 
     if (!schema) return null;
@@ -505,20 +507,20 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
 
     return (
         <FieldContext.Provider value={ctxValue}>
-        <div className="space-y-4">
+        <div className="space-y-6">
 
             {/* ── Section selector ── */}
-            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            <div className="border border-[var(--border-color)] rounded-lg p-4 bg-[var(--bg-hover)]">
+                <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide mb-3">
                     1. Choose sections to include
                 </p>
-                <div className="space-y-3">
+                <div className="space-y-4">
                     {CATEGORIES.map(cat => {
                         const available = cat.sections.filter(s => allSections.includes(s));
                         if (available.length === 0) return null;
                         return (
                             <div key={cat.label}>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">
+                                <p className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest mb-2">
                                     {cat.label}
                                 </p>
                                 <div className="flex flex-wrap gap-2">
@@ -530,13 +532,13 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
                                                 onClick={() => toggleSection(sec)}
                                                 className={`text-xs px-3 py-1 rounded-full border font-medium transition-all flex items-center gap-1.5 ${
                                                     enabled.has(sec)
-                                                        ? 'bg-orange-500 text-white border-orange-500 shadow-sm'
-                                                        : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400 hover:text-orange-600'
+                                                        ? 'bg-cyan-500 text-white border-cyan-500 shadow-sm'
+                                                        : 'bg-[var(--bg-card)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-cyan-400 hover:text-cyan-600'
                                                 }`}
                                             >
                                                 {sec}
                                                 {cnt > 0 && (
-                                                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold ${enabled.has(sec) ? 'bg-orange-400 text-white' : 'bg-orange-100 text-orange-600'}`}>
+                                                    <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${enabled.has(sec) ? 'bg-cyan-400 text-white' : 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300'}`}>
                                                         {cnt}
                                                     </span>
                                                 )}
@@ -552,15 +554,15 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
 
             {/* ── Field form ── */}
             {enabled.size > 0 && (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
+                    <div className="px-4 py-2 bg-[var(--bg-hover)] border-b border-[var(--border-color)]">
+                        <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wide">
                             2. Check fields to configure
                         </p>
                     </div>
 
                     {/* Sub-tabs */}
-                    <div className="flex overflow-x-auto border-b border-gray-200 bg-white">
+                    <div className="flex overflow-x-auto border-b border-[var(--border-color)] bg-[var(--bg-card)]">
                         {[...enabled].map(sec => {
                             const cnt = countEnabled(sec, enabledFields);
                             return (
@@ -569,13 +571,13 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
                                     onClick={() => setActiveSection(sec)}
                                     className={`px-3 py-2.5 text-xs font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 flex items-center gap-1.5 ${
                                         activeSection === sec
-                                            ? 'border-orange-500 text-orange-600 bg-orange-50'
-                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                            ? 'border-cyan-500 text-cyan-600 dark:text-cyan-400 bg-cyan-500/10'
+                                            : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)]'
                                     }`}
                                 >
                                     {sec}
                                     {cnt > 0 && (
-                                        <span className="text-[9px] bg-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                                        <span className="text-xs bg-cyan-500 text-white px-1.5 py-0.5 rounded-full font-bold">
                                             {cnt}
                                         </span>
                                     )}
@@ -596,7 +598,7 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
                                     onChange={v => updateSection(activeSection, v)}
                                 />
                             ) : (
-                                <p className="text-sm text-gray-400 text-center py-6">
+                                <p className="text-sm text-[var(--text-muted)] text-center py-6">
                                     Select a section tab above.
                                 </p>
                             )
@@ -606,24 +608,24 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
             )}
 
             {enabled.size === 0 && (
-                <div className="text-sm text-gray-400 text-center py-8 border border-dashed border-gray-200 rounded-lg">
+                <div className="text-sm text-[var(--text-muted)] text-center py-8 border border-dashed border-[var(--border-color)] rounded-lg">
                     Select sections above to begin.
                 </div>
             )}
 
             {/* ── JSON Preview ── */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="border border-[var(--border-color)] rounded-lg overflow-hidden">
                 <div
-                    className="flex items-center justify-between bg-gray-50 px-4 py-2.5 cursor-pointer"
+                    className="flex items-center justify-between bg-[var(--bg-hover)] px-4 py-2.5 cursor-pointer"
                     onClick={() => setShowPreview(p => !p)}
                 >
-                    <span className="text-xs font-semibold text-gray-600 flex items-center gap-2">
+                    <span className="text-xs font-semibold text-[var(--text-primary)] flex items-center gap-2">
                         {showPreview
-                            ? <ChevronDownIcon  className="w-3.5 h-3.5 text-gray-400" />
-                            : <ChevronRightIcon className="w-3.5 h-3.5 text-gray-400" />
+                            ? <ChevronDownIcon  className="w-3.5 h-3.5 text-[var(--text-muted)]" />
+                            : <ChevronRightIcon className="w-3.5 h-3.5 text-[var(--text-muted)]" />
                         }
                         3. Generated JSON Preview
-                        <span className="text-[10px] bg-gray-200 text-gray-500 px-1.5 py-0.5 rounded font-mono">
+                        <span className="text-xs bg-[var(--bg-card)] text-[var(--text-muted)] px-1.5 py-0.5 rounded font-mono border border-[var(--border-color)]">
                             {previewStr.split('\n').length} lines
                         </span>
                     </span>
@@ -641,7 +643,7 @@ export default function ConfigBuilder({ onUseConfig }: { onUseConfig: (json: any
                         height="300px"
                         language="json"
                         value={previewStr}
-                        theme="vs"
+                        theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'}
                         options={{
                             readOnly: true,
                             minimap: { enabled: false },

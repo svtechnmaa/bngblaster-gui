@@ -165,6 +165,7 @@ def _config_out(c: BNGConfig, current_user_id: int = 0, owner_username: str = ""
         "name": c.name,
         "description": c.description,
         "config_json": c.config_json,
+        "tags": c.tags or [],
         "user_id": c.user_id,
         "owner_username": owner_username,
         "is_owner": c.user_id == current_user_id,
@@ -342,6 +343,29 @@ def _name_taken(db: Session, name: str, exclude_id: int | None = None) -> bool:
     return db.query(q.exists()).scalar()
 
 
+def _clean_tags(raw: object) -> list[str]:
+    """Normalize incoming tags: trim, drop empties, de-dupe case-insensitively
+    (keeping first-seen casing), cap at 10 tags of <= 30 chars each."""
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        t = item.strip()[:30].strip()  # trailing .strip() removes whitespace left dangling by the [:30] truncation
+        if not t:
+            continue
+        key = t.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(t)
+        if len(out) >= 10:
+            break
+    return out
+
+
 def _unique_name(db: Session, base: str) -> str:
     """Return `base` if free, otherwise append ` (copy)`, ` (copy 2)`, ... until unique."""
     if not _name_taken(db, base):
@@ -387,6 +411,7 @@ def create_config(
         name=name,
         description=data.get("description"),
         config_json=data.get("config_json", {}),
+        tags=_clean_tags(data.get("tags")),
     )
     db.add(c)
     db.commit()
@@ -409,6 +434,7 @@ def clone_config(
         name=_unique_name(db, orig.name),
         description=orig.description,
         config_json=orig.config_json,
+        tags=list(orig.tags or []),
     )
     db.add(new_c)
     db.commit()
@@ -439,6 +465,8 @@ def update_config(
         c.description = data["description"]
     if "config_json" in data:
         c.config_json = data["config_json"]
+    if "tags" in data:
+        c.tags = _clean_tags(data["tags"])
     db.commit()
     db.refresh(c)
     owner_name = db.query(User.username).filter(User.id == c.user_id).scalar() or ""
@@ -459,6 +487,35 @@ def delete_config(
     db.delete(c)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/configs/bulk-delete")
+def bulk_delete_configs(
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete many configs in a single transaction. Only rows the user may
+    delete (their own, or any for admins) are removed; the rest are skipped.
+    Returns the ids actually deleted so the client can reconcile its list."""
+    raw = data.get("ids") or []
+    ids = [int(i) for i in raw if isinstance(i, int) or (isinstance(i, str) and i.isdigit())]
+    if not ids:
+        return {"deleted": 0, "skipped": 0, "deleted_ids": []}
+    if len(ids) > 1000:
+        raise HTTPException(status_code=400, detail="Too many ids in one request (max 1000)")
+    rows = db.query(BNGConfig).filter(BNGConfig.id.in_(ids)).all()
+    is_admin = current_user.role == "admin"
+    deletable = [c for c in rows if is_admin or c.user_id == current_user.id]
+    deleted_ids = [int(c.id) for c in deletable]
+    for c in deletable:
+        db.delete(c)
+    db.commit()
+    return {
+        "deleted": len(deleted_ids),
+        "skipped": len(rows) - len(deletable),
+        "deleted_ids": deleted_ids,
+    }
 
 
 # ── BNG server proxy endpoints ────────────────────────────────────────────────

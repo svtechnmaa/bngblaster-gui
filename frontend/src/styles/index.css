@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Drive Tailwind's dark: variant off the app's [data-theme="dark"] attribute
+   (toggled by the theme switch) instead of the OS prefers-color-scheme, so it
+   agrees with the CSS-variable tokens below. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ══════════════════════════════════════════════════════════
    Design Tokens
    ══════════════════════════════════════════════════════════ */
@@ -132,6 +137,13 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
   box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+/* ── Sticky top bar — opaque + blur so scrolled content doesn't bleed through ── */
+.glass-topbar {
+  background: var(--topbar-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .table-card {
@@ -349,8 +361,8 @@ textarea.form-input { resize: vertical; }
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .input-field:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(8,145,178,0.15);
 }
 [data-theme="dark"] .input-field {
   background: rgba(255,255,255,0.05);
@@ -359,6 +371,20 @@ textarea.form-input { resize: vertical; }
 [data-theme="dark"] .input-field:focus {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 0 3px rgba(34,211,238,0.15);
+}
+
+/* Make the browser render native controls (incl. the <select> option popup,
+   date pickers, scrollbars) in the active theme — fixes white-on-white option
+   lists in dark mode. */
+:root { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+
+/* Belt-and-suspenders: give <option> rows an opaque themed background so the
+   dropdown list is readable even where color-scheme isn't honored. */
+select option,
+select optgroup {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* ══════════════════════════════════════════════════════════

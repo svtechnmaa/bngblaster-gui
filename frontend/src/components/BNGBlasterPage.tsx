@@ -10,7 +10,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import Editor from '@monaco-editor/react';
+import Editor, { DiffEditor } from '@monaco-editor/react';
+import { toast } from 'sonner';
 import {
     BoltIcon, PlusIcon, TrashIcon, PlayCircleIcon,
     StopCircleIcon, ExclamationTriangleIcon, DocumentTextIcon,
@@ -26,6 +27,8 @@ import ConfigBuilder from './ConfigBuilder';
 import DashboardTab from './dashboard/DashboardTab';
 import TopologyView from './topology/TopologyView';
 import { useAuthStore } from '../store/useAuthStore';
+import { useTelemetryStore } from '../store/useTelemetryStore';
+import { confirmDialog } from '../store/useConfirmStore';
 import { can, type Role } from '../utils/permissions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -33,7 +36,7 @@ import { can, type Role } from '../utils/permissions';
 interface BNGServer { id: number; name: string; host: string; port: number; ssh_user?: string; ssh_pass?: string; }
 interface BNGConfig  {
     id: number; name: string; description?: string; config_json: any; updated_at?: string;
-    is_owner?: boolean; owner_username?: string; user_id?: number;
+    is_owner?: boolean; owner_username?: string; user_id?: number; tags?: string[];
 }
 
 interface NetIfaceStats  { name: string; 'tx-pps': number; 'rx-pps': number; 'rx-loss-packets-streams': number; }
@@ -191,11 +194,17 @@ export default function BNGBlasterPage() {
     const [cfgSubTab, setCfgSubTab] = useState<'editor' | 'builder'>('editor');
     const [savedCfgSearch, setSavedCfgSearch] = useState('');
     const [savedCfgFilter, setSavedCfgFilter] = useState<'all' | 'running' | 'idle'>('all');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
+    const [ownerFilter, setOwnerFilter] = useState<string>('all'); // 'all' | 'mine' | <username>
     const [configs, setConfigs] = useState<BNGConfig[]>([]);
     const [editingCfg, setEditingCfg] = useState<BNGConfig | null>(null);
     const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState<{ done: number; total: number } | null>(null);
+    const [diffCfgs, setDiffCfgs] = useState<[BNGConfig, BNGConfig] | null>(null);
     const [cfgName, setCfgName] = useState('');
     const [cfgDesc, setCfgDesc] = useState('');
+    const [cfgTags, setCfgTags] = useState<string[]>([]);
+    const [cfgTagInput, setCfgTagInput] = useState('');
     const [cfgJson, setCfgJson] = useState(JSON.stringify(DEFAULT_CONFIG, null, 2));
     const [cfgSaving, setCfgSaving] = useState(false);
     const [cfgError, setCfgError] = useState('');
@@ -262,7 +271,6 @@ export default function BNGBlasterPage() {
     const [restartingInstance, setRestartingInstance] = useState<string | null>(null);
 
     // ── Error banner ─────────────────────────────────────────────────────
-    const [globalError, setGlobalError] = useState('');
 
     // ── Default SSH credentials (saved in DB, managed in Servers tab) ────
     const [defaultSshUser, setDefaultSshUser] = useState('');
@@ -270,6 +278,25 @@ export default function BNGBlasterPage() {
     const [credsSaving, setCredsSaving] = useState(false);
     const [credsSaved, setCredsSaved]   = useState(false);
     const [showCredPass, setShowCredPass] = useState(false);
+
+    // ── Publish live telemetry to the TopBar instrument rail ──────────────
+    const setTelemetry = useTelemetryStore(s => s.setTelemetry);
+    const resetTelemetry = useTelemetryStore(s => s.reset);
+    useEffect(() => {
+        const running = allInstances.filter(i => i.status === 'started').length;
+        const hasLive = monitoring && netStats.length > 0;
+        const txPps = hasLive ? netStats.reduce((a, i) => a + (i['tx-pps'] || 0), 0) : 0;
+        const rxPps = hasLive ? netStats.reduce((a, i) => a + (i['rx-pps'] || 0), 0) : 0;
+        const txBps = hasLive ? streamStats.reduce((a, s) => a + (s['tx-bps-l2'] || 0), 0) : 0;
+        const rxBps = hasLive ? streamStats.reduce((a, s) => a + (s['rx-bps-l2'] || 0), 0) : 0;
+        const loss = hasLive ? streamStats.reduce((a, s) => a + (s['rx-loss'] || 0), 0) : 0;
+        setTelemetry({
+            server: selServer ? { name: selServer.name, host: selServer.host, port: selServer.port } : null,
+            total: allInstances.length, running, monitoring,
+            txPps, rxPps, txBps, rxBps, loss, streams: streamStats.length, hasLive,
+        });
+    }, [selServer, allInstances, monitoring, netStats, streamStats, setTelemetry]);
+    useEffect(() => () => resetTelemetry(), [resetTelemetry]);
 
     // ── Load servers + configs + settings on mount ────────────────────────
     useEffect(() => {
@@ -307,7 +334,8 @@ export default function BNGBlasterPage() {
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    const showErr = (msg: string) => { setGlobalError(msg); setTimeout(() => setGlobalError(''), 5000); };
+    const showErr = (msg: string) => toast.error(msg);
+    const showOk = (msg: string) => toast.success(msg);
 
     // ── Servers CRUD ──────────────────────────────────────────────────────
 
@@ -325,7 +353,7 @@ export default function BNGBlasterPage() {
     };
 
     const handleDeleteServer = async (id: number) => {
-        if (!confirm('Delete this server?')) return;
+        if (!(await confirmDialog({ title: 'Delete server', message: 'Delete this server?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/bngblaster/servers/${id}`);
             setServers(s => s.filter(x => x.id !== id));
@@ -432,6 +460,7 @@ export default function BNGBlasterPage() {
     const startNewConfig = () => {
         setEditingCfg(null);
         setCfgName(''); setCfgDesc('');
+        setCfgTags([]); setCfgTagInput('');
         setCfgJson(JSON.stringify(DEFAULT_CONFIG, null, 2));
         setCfgError('');
     };
@@ -439,6 +468,7 @@ export default function BNGBlasterPage() {
     const startEditConfig = (c: BNGConfig) => {
         setEditingCfg(c);
         setCfgName(c.name); setCfgDesc(c.description || '');
+        setCfgTags(c.tags ?? []); setCfgTagInput('');
         setCfgJson(JSON.stringify(c.config_json, null, 2));
         setCfgError('');
     };
@@ -450,6 +480,13 @@ export default function BNGBlasterPage() {
         if (!trimmed) return null;
         return configs.find(c => c.name === trimmed && c.id !== editingCfg?.id) ?? null;
     })();
+
+    const addCfgTag = (raw: string) => {
+        const t = raw.trim().slice(0, 30).trim();
+        if (!t) return;
+        setCfgTags(prev => prev.some(x => x.toLowerCase() === t.toLowerCase()) || prev.length >= 10 ? prev : [...prev, t]);
+        setCfgTagInput('');
+    };
 
     const handleSaveConfig = async () => {
         if (!cfgName.trim()) { setCfgError('Name is required'); return; }
@@ -464,19 +501,20 @@ export default function BNGBlasterPage() {
         setCfgSaving(true); setCfgError('');
         try {
             if (editingCfg) {
-                const r = await api.put(`/bngblaster/configs/${editingCfg.id}`, { name: cfgName.trim(), description: cfgDesc, config_json: parsed });
+                const r = await api.put(`/bngblaster/configs/${editingCfg.id}`, { name: cfgName.trim(), description: cfgDesc, tags: cfgTags, config_json: parsed });
                 setConfigs(cs => cs.map(c => c.id === editingCfg.id ? r.data : c));
             } else {
-                const r = await api.post('/bngblaster/configs', { name: cfgName.trim(), description: cfgDesc, config_json: parsed });
+                const r = await api.post('/bngblaster/configs', { name: cfgName.trim(), description: cfgDesc, tags: cfgTags, config_json: parsed });
                 setConfigs(cs => [r.data, ...cs]);
             }
+            showOk(editingCfg ? 'Config updated' : 'Config created');
             startNewConfig();
         } catch (e: any) { setCfgError(e.response?.data?.detail || 'Save failed'); }
         finally { setCfgSaving(false); }
     };
 
     const handleDeleteConfig = async (id: number) => {
-        if (!confirm('Delete this config?')) return;
+        if (!(await confirmDialog({ title: 'Delete config', message: 'Delete this config?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/bngblaster/configs/${id}`);
             setConfigs(cs => cs.filter(c => c.id !== id));
@@ -553,15 +591,31 @@ export default function BNGBlasterPage() {
         if (deletable.length === 0) { showErr('You have no permission to delete the selected configs'); return; }
         const skipped = chosen.length - deletable.length;
         const prompt = `Delete ${deletable.length} config(s)?` + (skipped ? ` (${skipped} skipped — no permission)` : '');
-        if (!confirm(prompt)) return;
+        if (!(await confirmDialog({ title: 'Delete configs', message: prompt, confirmLabel: 'Delete', danger: true }))) return;
         const ids = deletable.map(c => c.id);
-        const results = await Promise.allSettled(ids.map(id => api.delete(`/bngblaster/configs/${id}`)));
-        const okIds = new Set(ids.filter((_, i) => results[i].status === 'fulfilled'));
-        const failed = results.length - okIds.size;
-        setConfigs(cs => cs.filter(c => !okIds.has(c.id)));
-        if (editingCfg && okIds.has(editingCfg.id)) startNewConfig();
+        // Delete in small sequential batches (one transaction per batch) instead of
+        // firing one request per config — 500 concurrent DELETEs saturate the backend.
+        const CHUNK = 50;
+        const deleted = new Set<number>();
+        let failedBatches = 0;
+        setBulkDeleting({ done: 0, total: ids.length });
+        try {
+            for (let i = 0; i < ids.length; i += CHUNK) {
+                const slice = ids.slice(i, i + CHUNK);
+                try {
+                    const r = await api.post('/bngblaster/configs/bulk-delete', { ids: slice });
+                    (r.data?.deleted_ids as number[] | undefined)?.forEach(id => deleted.add(id));
+                } catch { failedBatches++; }
+                setBulkDeleting({ done: Math.min(i + CHUNK, ids.length), total: ids.length });
+            }
+        } finally {
+            setBulkDeleting(null);
+        }
+        setConfigs(cs => cs.filter(c => !deleted.has(c.id)));
+        if (editingCfg && deleted.has(editingCfg.id)) startNewConfig();
         clearCfgSelection();
-        if (failed) showErr(`${failed} config(s) failed to delete`);
+        if (failedBatches) showErr(`${failedBatches} batch(es) failed — ${deleted.size}/${ids.length} deleted`);
+        else showOk(`Deleted ${deleted.size} config(s)`);
     };
 
     const importFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -682,7 +736,7 @@ export default function BNGBlasterPage() {
 
     const handleKill = async (instance: string) => {
         if (!selServer) return;
-        if (!confirm(`Force-kill "${instance}"? The report may not be generated.`)) return;
+        if (!(await confirmDialog({ title: 'Force-kill instance', message: `Force-kill "${instance}"? The report may not be generated.`, confirmLabel: 'Force kill', danger: true }))) return;
         setInstLoading(instance, 'kill', true);
         try {
             await api.post(`/bngblaster/servers/${selServer.id}/instances/${instance}/kill`);
@@ -885,6 +939,30 @@ export default function BNGBlasterPage() {
 
     useEffect(() => () => stopMonitoring(), [stopMonitoring]);
 
+    // Escape-to-close for fullscreen stats table modal
+    useEffect(() => {
+        if (!fullscreenTable) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setFullscreenTable(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [fullscreenTable]);
+
+    // Escape-to-close for topology preview modal
+    useEffect(() => {
+        if (!topologyModalCfg) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setTopologyModalCfg(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [topologyModalCfg]);
+
+    // Escape-to-close for the config compare (diff) modal
+    useEffect(() => {
+        if (!diffCfgs) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDiffCfgs(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [diffCfgs]);
+
     // Auto-scroll log to bottom whenever new log content is loaded
     useEffect(() => {
         if (logPreRef.current && logText) {
@@ -976,15 +1054,14 @@ export default function BNGBlasterPage() {
         return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${cls}`}>{status}</span>;
     };
 
+    const allCfgTags = Array.from(new Set(configs.flatMap(c => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
+    const allOwners = Array.from(new Set(configs.map(c => c.owner_username).filter(Boolean) as string[])).sort();
+    const tagHue = (t: string) => { let h = 0; for (const ch of t) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; };
+    const toggleTag = (t: string) => setSelectedTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+
     // ── Render ────────────────────────────────────────────────────────────
     return (
         <div className="space-y-4 animate-fade-in">
-            {globalError && (
-                <div className="glass-card p-3 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs">
-                    <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />
-                    {globalError}
-                </div>
-            )}
 
             {/* Tabs */}
             <div className="glass-card overflow-hidden">
@@ -1449,6 +1526,41 @@ export default function BNGBlasterPage() {
                                                 placeholder="Search…"
                                                 className="w-full text-xs px-2.5 py-1.5 rounded-lg border border-[var(--border-color)] bg-[var(--input-bg)] focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                             />
+                                            <div className="flex items-center gap-2">
+                                                <select
+                                                    value={ownerFilter}
+                                                    onChange={e => setOwnerFilter(e.target.value)}
+                                                    className="input-field text-xs py-1 flex-1"
+                                                    aria-label="Filter by owner"
+                                                >
+                                                    <option value="all">All owners</option>
+                                                    <option value="mine">Mine</option>
+                                                    {allOwners.map(o => <option key={o} value={o}>@{o}</option>)}
+                                                </select>
+                                            </div>
+                                            {allCfgTags.length > 0 && (
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    {allCfgTags.map(t => {
+                                                        const on = selectedTags.includes(t);
+                                                        const hue = tagHue(t);
+                                                        return (
+                                                            <button
+                                                                key={t}
+                                                                type="button"
+                                                                aria-pressed={on}
+                                                                onClick={() => toggleTag(t)}
+                                                                className="text-[11px] font-medium px-2 py-0.5 rounded-full border transition-colors cursor-pointer"
+                                                                style={on
+                                                                    ? { background: `hsl(${hue} 65% 45%)`, color: '#fff', borderColor: `hsl(${hue} 65% 45%)` }
+                                                                    : { background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 65% 38%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                            >{t}</button>
+                                                        );
+                                                    })}
+                                                    {selectedTags.length > 0 && (
+                                                        <button type="button" onClick={() => setSelectedTags([])} className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] underline cursor-pointer">Clear tags</button>
+                                                    )}
+                                                </div>
+                                            )}
                                             {(() => {
                                                 const visible = configs.filter(c => {
                                                     const instName = toInstanceName(c.name);
@@ -1456,14 +1568,29 @@ export default function BNGBlasterPage() {
                                                     const isRunning = inst?.status === 'started';
                                                     if (savedCfgFilter === 'running' && !isRunning) return false;
                                                     if (savedCfgFilter === 'idle' && isRunning) return false;
+                                                    if (ownerFilter === 'mine' && c.is_owner === false) return false;
+                                                    if (ownerFilter !== 'all' && ownerFilter !== 'mine' && c.owner_username !== ownerFilter) return false;
+                                                    if (selectedTags.length && !selectedTags.some(t => (c.tags ?? []).includes(t))) return false;
                                                     const q = savedCfgSearch.toLowerCase().trim();
                                                     return !q || c.name.toLowerCase().includes(q) || (c.description ?? '').toLowerCase().includes(q);
                                                 });
                                                 if (configs.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs yet.</p>;
-                                                if (visible.length === 0) return <p className="text-xs text-[var(--text-muted)] text-center py-4">No configs match.</p>;
+                                                if (visible.length === 0) return (
+                                                    <div className="text-center py-4 space-y-2">
+                                                        <p className="text-xs text-[var(--text-muted)]">No configs match.</p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => { setSelectedTags([]); setOwnerFilter('all'); setSavedCfgSearch(''); setSavedCfgFilter('all'); }}
+                                                            className="text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] underline cursor-pointer"
+                                                        >
+                                                            Reset filters
+                                                        </button>
+                                                    </div>
+                                                );
                                                 const visibleIds = visible.map(v => v.id);
                                                 const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCfgIds.has(id));
                                                 const selCount = selectedCfgIds.size;
+                                                const filterActive = savedCfgSearch.trim() !== '' || savedCfgFilter !== 'all' || ownerFilter !== 'all' || selectedTags.length > 0;
                                                 return (
                                                     <div className="space-y-2">
                                                         {/* Bulk selection bar */}
@@ -1479,13 +1606,36 @@ export default function BNGBlasterPage() {
                                                                         return next;
                                                                     })}
                                                                     className="rounded border-[var(--border-color)] text-cyan-500 focus:ring-cyan-400"
+                                                                    title={filterActive ? 'Select all configs matching the current filters' : 'Select all configs'}
                                                                 />
-                                                                Select all
+                                                                Select all {visibleIds.length}{filterActive ? ' filtered' : ''}
                                                             </label>
-                                                            {selCount > 0 && (
+                                                            {bulkDeleting ? (
+                                                                <>
+                                                                    <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">
+                                                                        Deleting {Math.round((bulkDeleting.done / Math.max(1, bulkDeleting.total)) * 100)}%
+                                                                    </span>
+                                                                    <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-hover)] overflow-hidden">
+                                                                        <div className="h-full bg-red-500 transition-[width] duration-200" style={{ width: `${(bulkDeleting.done / Math.max(1, bulkDeleting.total)) * 100}%` }} />
+                                                                    </div>
+                                                                    <span className="text-[11px] tabular-nums text-[var(--text-muted)] shrink-0">{bulkDeleting.done}/{bulkDeleting.total}</span>
+                                                                </>
+                                                            ) : selCount > 0 && (
                                                                 <>
                                                                     <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">{selCount} selected</span>
                                                                     <div className="flex-1" />
+                                                                    {selCount === 2 && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const pair = configs.filter(c => selectedCfgIds.has(c.id));
+                                                                                if (pair.length === 2) setDiffCfgs([pair[0], pair[1]]);
+                                                                            }}
+                                                                            className="btn-secondary text-xs"
+                                                                            title="Compare the two selected configs"
+                                                                        >
+                                                                            <DocumentDuplicateIcon className="w-3 h-3" />Compare
+                                                                        </button>
+                                                                    )}
                                                                     <button onClick={handleBulkDownload} className="btn-secondary text-xs" title="Download each selected config (.json)">
                                                                         <ArrowDownTrayIcon className="w-3 h-3" />Download
                                                                     </button>
@@ -1538,6 +1688,23 @@ export default function BNGBlasterPage() {
                                                                                 )}
                                                                             </div>
                                                                             {c.description && <p className="text-xs text-[var(--text-muted)] truncate">{c.description}</p>}
+                                                                            {(c.tags ?? []).length > 0 && (
+                                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                                    {(c.tags ?? []).map(t => {
+                                                                                        const hue = tagHue(t);
+                                                                                        return (
+                                                                                            <button
+                                                                                                key={t}
+                                                                                                type="button"
+                                                                                                onClick={e => { e.stopPropagation(); toggleTag(t); }}
+                                                                                                className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border cursor-pointer"
+                                                                                                style={{ background: `hsl(${hue} 60% 50% / 0.12)`, color: `hsl(${hue} 65% 38%)`, borderColor: `hsl(${hue} 60% 50% / 0.30)` }}
+                                                                                                title={`Filter by tag ${t}`}
+                                                                                            >{t}</button>
+                                                                                        );
+                                                                                    })}
+                                                                                </div>
+                                                                            )}
                                                                             <p className="text-[10px] text-[var(--text-muted)] mt-0.5">
                                                                                 {c.updated_at ? new Date(c.updated_at).toLocaleString() : '—'}
                                                                             </p>
@@ -1627,6 +1794,32 @@ export default function BNGBlasterPage() {
                                                 <div>
                                                     <label className="block text-xs text-[var(--text-muted)] mb-1">Description</label>
                                                     <input className="input-field text-sm" placeholder="Optional description" value={cfgDesc} onChange={e => setCfgDesc(e.target.value)} />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-xs text-[var(--text-muted)] mb-1">Tags</label>
+                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                        {cfgTags.map(t => (
+                                                            <span key={t} className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 border border-cyan-500/25">
+                                                                {t}
+                                                                <button type="button" onClick={() => setCfgTags(prev => prev.filter(x => x !== t))} className="hover:text-red-500" aria-label={`Remove tag ${t}`}>×</button>
+                                                            </span>
+                                                        ))}
+                                                        <input
+                                                            className="input-field text-sm flex-1 min-w-[8rem]"
+                                                            placeholder={cfgTags.length >= 10 ? 'Max 10 tags' : 'Add tag + Enter'}
+                                                            disabled={cfgTags.length >= 10}
+                                                            list="cfg-tag-suggestions"
+                                                            value={cfgTagInput}
+                                                            onChange={e => setCfgTagInput(e.target.value)}
+                                                            onKeyDown={e => {
+                                                                if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addCfgTag(cfgTagInput); }
+                                                                else if (e.key === 'Backspace' && !cfgTagInput && cfgTags.length) setCfgTags(prev => prev.slice(0, -1));
+                                                            }}
+                                                        />
+                                                        <datalist id="cfg-tag-suggestions">
+                                                            {allCfgTags.filter(t => !cfgTags.includes(t)).map(t => <option key={t} value={t} />)}
+                                                        </datalist>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div>
@@ -1733,7 +1926,7 @@ export default function BNGBlasterPage() {
                             )}
 
                             {/* ══ TOP: Instances on Server ══ */}
-                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-cyan-500 overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <ServerIcon className="w-4 h-4 text-cyan-500" />
@@ -1778,7 +1971,7 @@ export default function BNGBlasterPage() {
                                 {!selServer ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-8">Select a BNG server above.</p>
                                 ) : loadingInstances ? (
-                                    <p className="text-sm text-[var(--text-muted)] text-center py-8">Loading instances…</p>
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-8"><span className="flex items-center justify-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading instances…</span></p>
                                 ) : allInstances.length === 0 ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-8">No instances found on this server.</p>
                                 ) : (() => {
@@ -1786,9 +1979,13 @@ export default function BNGBlasterPage() {
                                         .filter(i => instFilter === 'all' || i.status === 'started')
                                         .filter(i => !instSearch.trim() || i.name.toLowerCase().includes(instSearch.toLowerCase()));
                                     return filtered.length === 0 ? (
-                                        <p className="text-sm text-[var(--text-muted)] text-center py-8">
-                                            {instFilter === 'running' ? 'No running instances.' : 'No instances match the filter.'}
-                                        </p>
+                                        <div className="flex flex-col items-center gap-2 text-center py-8">
+                                            <ServerIcon className="w-8 h-8 text-[var(--text-muted)] opacity-40" />
+                                            <p className="text-sm text-[var(--text-muted)]">
+                                                {instFilter === 'running' ? 'No running instances.' : 'No instances match the filter.'}
+                                            </p>
+                                            <p className="text-xs text-[var(--text-muted)] opacity-70">Start a config from the Configs tab.</p>
+                                        </div>
                                     ) : (
                                     <div className="divide-y divide-[var(--border-color)]">
                                         {filtered.map(inst => {
@@ -1880,7 +2077,7 @@ export default function BNGBlasterPage() {
                                                         <div className="px-4 pb-3 border-t border-dashed border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                             <p className="text-[10px] text-[var(--text-muted)] py-2 font-semibold uppercase tracking-wide">config.json — {inst.name}</p>
                                                             {viewConfigLoading
-                                                                ? <p className="text-xs text-gray-400 py-2">Loading…</p>
+                                                                ? <p className="text-xs text-gray-400 py-2"><span className="flex items-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading…</span></p>
                                                                 : <ResizableEditorBox defaultHeight={208} min={100}>
                                                                     <Editor height="100%" theme="vs-dark" language="json" value={viewConfigJson}
                                                                         options={{ readOnly: true, minimap: { enabled: false }, fontSize: 11, scrollBeyondLastLine: false }} />
@@ -1897,7 +2094,7 @@ export default function BNGBlasterPage() {
                                                             {netStats.length > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-indigo-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-indigo-500 flex items-center gap-1">
                                                                             <BoltIcon className="w-3 h-3" />Network Interfaces
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                                                         </h5>
@@ -1938,17 +2135,17 @@ export default function BNGBlasterPage() {
                                                                             <thead>
                                                                                 <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                     {['Interface', 'NW-TX (pps)', 'NW-RX (pps)', 'NW-LOSS (pkts-stream)'].map(h => (
-                                                                                        <th key={h} className="text-left py-1 px-2 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                        <th key={h} className="text-left py-1.5 px-2 text-indigo-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                     ))}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
                                                                                 {netStats.map((iif, i) => (
                                                                                     <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
-                                                                                        <td className="py-1 px-2 font-mono">{iif.name}</td>
-                                                                                        <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
-                                                                                        <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className="py-1.5 px-2 font-mono">{iif.name}</td>
+                                                                                        <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
+                                                                                        <td className="py-1.5 px-2 text-indigo-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -1961,7 +2158,7 @@ export default function BNGBlasterPage() {
                                                             {accStats.length > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-blue-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-blue-500 flex items-center gap-1">
                                                                             <BoltIcon className="w-3 h-3" />Access Interfaces
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                                                                         </h5>
@@ -2002,18 +2199,18 @@ export default function BNGBlasterPage() {
                                                                             <thead>
                                                                                 <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                     {['Interface', 'AC-TX (pps)', 'AC-RX (pps)', 'AC-LOSS (pkts-stream)', 'AC-LOSS (pkts-mcast)'].map(h => (
-                                                                                        <th key={h} className="text-left py-1 px-2 text-blue-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                        <th key={h} className="text-left py-1.5 px-2 text-blue-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                     ))}
                                                                                 </tr>
                                                                             </thead>
                                                                             <tbody>
                                                                                 {accStats.map((iif, i) => (
                                                                                     <tr key={i} className="border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)]">
-                                                                                        <td className="py-1 px-2 font-mono">{iif.name}</td>
-                                                                                        <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
-                                                                                        <td className="py-1 px-2 text-sky-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
-                                                                                        <td className={`py-1 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
+                                                                                        <td className="py-1.5 px-2 font-mono">{iif.name}</td>
+                                                                                        <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(iif['tx-pps'])}</td>
+                                                                                        <td className="py-1.5 px-2 text-sky-600 font-bold">{fmtPps(iif['rx-pps'])}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-streams'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-streams']}</td>
+                                                                                        <td className={`py-1.5 px-2 font-bold ${iif['rx-loss-packets-multicast'] > 0 ? 'text-red-500' : 'text-[var(--text-muted)]'}`}>{iif['rx-loss-packets-multicast']}</td>
                                                                                     </tr>
                                                                                 ))}
                                                                             </tbody>
@@ -2026,7 +2223,7 @@ export default function BNGBlasterPage() {
                                                             {monitorTotalFlows > 0 && (
                                                                 <div className="space-y-2">
                                                                     <div className="flex items-center justify-between">
-                                                                        <h5 className="text-[10px] font-bold uppercase tracking-wide text-purple-500 flex items-center gap-1">
+                                                                        <h5 className="text-xs font-bold uppercase tracking-wide text-purple-500 flex items-center gap-1">
                                                                             <ChartBarIcon className="w-3 h-3" />
                                                                             Stream Statistics
                                                                             <span className="font-normal text-gray-400">({monitorTotalFlows} flows total{selectedFlowIds.length > 0 ? ` · showing ${selectedFlowIds.length}` : ' · none selected'})</span>
@@ -2073,26 +2270,26 @@ export default function BNGBlasterPage() {
                                                                                 <thead>
                                                                                     <tr className="border-b border-[var(--border-color)] bg-[var(--bg-hover)]">
                                                                                         {['NAME', 'FLOW-ID', 'DIRECTION', 'SESSION-ID', 'TX (pps)', 'TX (bps)', 'RX (pps)', 'RX (bps)', 'PKT-LOSS'].map(h => (
-                                                                                            <th key={h} className="text-left py-1 px-2 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
+                                                                                            <th key={h} className="text-left py-1.5 px-2 text-purple-600 font-semibold whitespace-nowrap">{h}</th>
                                                                                         ))}
                                                                                     </tr>
                                                                                 </thead>
                                                                                 <tbody>
                                                                                     {streamStats.map((s, i) => (
                                                                                         <tr key={i} className={`border-b border-[var(--border-color)] hover:bg-[var(--bg-hover)] ${s['rx-loss'] > 0 ? 'bg-red-500/10' : ''}`}>
-                                                                                            <td className="py-1 px-2 font-medium max-w-[100px] truncate" title={s.name}>{s.name}</td>
-                                                                                            <td className="py-1 px-2">{s['flow-id']}</td>
-                                                                                            <td className="py-1 px-2">
+                                                                                            <td className="py-1.5 px-2 font-medium max-w-[100px] truncate" title={s.name}>{s.name}</td>
+                                                                                            <td className="py-1.5 px-2">{s['flow-id']}</td>
+                                                                                            <td className="py-1.5 px-2">
                                                                                                 <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${s.direction === 'upstream' ? 'bg-orange-500/15 text-orange-600 dark:text-orange-400' : 'bg-blue-500/15 text-blue-600 dark:text-blue-400'}`}>
                                                                                                     {s.direction === 'upstream' ? '↑ UP' : '↓ DN'}
                                                                                                 </span>
                                                                                             </td>
-                                                                                            <td className="py-1 px-2">{s['session-id'] ?? '—'}</td>
-                                                                                            <td className="py-1 px-2 text-orange-600 font-bold">{fmtPps(s['tx-pps'])}</td>
-                                                                                            <td className="py-1 px-2 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
-                                                                                            <td className="py-1 px-2 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
-                                                                                            <td className="py-1 px-2 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
-                                                                                            <td className={`py-1 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
+                                                                                            <td className="py-1.5 px-2">{s['session-id'] ?? '—'}</td>
+                                                                                            <td className="py-1.5 px-2 text-orange-600 font-bold">{fmtPps(s['tx-pps'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-orange-400">{fmtBps(s['tx-bps-l2'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-indigo-600 font-bold">{fmtPps(s['rx-pps'])}</td>
+                                                                                            <td className="py-1.5 px-2 text-indigo-400">{fmtBps(s['rx-bps-l2'])}</td>
+                                                                                            <td className={`py-1.5 px-2 font-bold ${s['rx-loss'] > 0 ? 'text-red-600' : 'text-[var(--text-muted)]'}`}>{s['rx-loss']}</td>
                                                                                         </tr>
                                                                                     ))}
                                                                                 </tbody>
@@ -2112,7 +2309,7 @@ export default function BNGBlasterPage() {
 
                                                             {/* Log */}
                                                             <div className="flex items-center justify-between gap-2">
-                                                                <h5 className="text-[10px] font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1">
+                                                                <h5 className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1">
                                                                     <ClipboardDocumentListIcon className="w-3 h-3" />Run Log
                                                                     {logText && logText !== '(empty log)' && (
                                                                         <span className="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-gray-700 text-green-400 font-semibold normal-case">
@@ -2163,7 +2360,7 @@ export default function BNGBlasterPage() {
                             </div>
 
                             {/* ══ BOTTOM: Saved Configs — Start New Test ══ */}
-                            <div className="border-2 border-emerald-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-emerald-500 overflow-hidden">
                                 <div className="px-4 py-3 bg-emerald-500/10 border-b border-emerald-400/30 flex items-center justify-between">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <PlayCircleIcon className="w-4 h-4 text-emerald-500" />
@@ -2327,7 +2524,7 @@ export default function BNGBlasterPage() {
                         <div className="space-y-4">
 
                             {/* ══ Instances on Server (mirrored from Run tab) ══ */}
-                            <div className="border-2 border-cyan-400/60 rounded-xl overflow-hidden">
+                            <div className="glass-card border-t-2 border-t-cyan-500 overflow-hidden">
                                 <div className="flex items-center justify-between px-4 py-3 bg-cyan-500/10 border-b border-cyan-400/30">
                                     <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
                                         <ServerIcon className="w-4 h-4 text-cyan-500" />
@@ -2354,11 +2551,14 @@ export default function BNGBlasterPage() {
                                 {!selServer ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-6">Select a server in the <strong>Run &amp; Monitor</strong> tab first.</p>
                                 ) : loadingInstances ? (
-                                    <p className="text-sm text-[var(--text-muted)] text-center py-6">Loading…</p>
+                                    <p className="text-sm text-[var(--text-muted)] text-center py-6"><span className="flex items-center justify-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading…</span></p>
                                 ) : (() => {
                                     const rptFiltered = allInstances.filter(i => instFilter === 'all' || i.status === 'started');
                                     return rptFiltered.length === 0 ? (
-                                        <p className="text-sm text-[var(--text-muted)] text-center py-6">{instFilter === 'running' ? 'No running instances.' : 'No instances.'}</p>
+                                        <div className="flex flex-col items-center gap-2 text-center py-6">
+                                            <ChartBarIcon className="w-8 h-8 text-[var(--text-muted)] opacity-40" />
+                                            <p className="text-sm text-[var(--text-muted)]">{instFilter === 'running' ? 'No running instances.' : 'No instances.'}</p>
+                                        </div>
                                     ) : (
                                         <div className="divide-y divide-[var(--border-color)]">
                                             {rptFiltered.map(inst => {
@@ -2474,7 +2674,7 @@ export default function BNGBlasterPage() {
         {/* ── Fullscreen Table Modal (portal → bypasses stacking context) ── */}
         {fullscreenTable && createPortal(
             <div className="fixed inset-0 z-[9999] bg-black/60 flex items-start justify-center p-4 overflow-auto" onClick={() => setFullscreenTable(null)}>
-                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-7xl mt-8" onClick={e => e.stopPropagation()}>
+                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-7xl mt-8" role="dialog" aria-modal="true" aria-label="Statistics table" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
                         <h3 className="text-sm font-bold text-[var(--text-primary)]">
                             {fullscreenTable === 'network' ? 'Network Interfaces' : fullscreenTable === 'access' ? 'Access Interfaces' : 'Stream Statistics'}
@@ -2582,7 +2782,7 @@ export default function BNGBlasterPage() {
         {/* Topology preview modal (from Configs tab) */}
         {topologyModalCfg && createPortal(
             <div className="fixed inset-0 z-[60] bg-black/40 flex items-center justify-center p-4" onClick={() => setTopologyModalCfg(null)}>
-                <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+                <div className="bg-[var(--bg-secondary)] rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto p-6" role="dialog" aria-modal="true" aria-label="Topology preview" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <div className="text-xs uppercase tracking-wide text-[var(--text-muted)] font-semibold">Topology preview</div>
@@ -2593,6 +2793,36 @@ export default function BNGBlasterPage() {
                         </button>
                     </div>
                     <TopologyView configJson={topologyModalCfg.config_json} />
+                </div>
+            </div>,
+            document.body,
+        )}
+
+        {/* Config compare (diff) modal — from Configs tab, exactly 2 selected */}
+        {diffCfgs && createPortal(
+            <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" onClick={() => setDiffCfgs(null)}>
+                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="Compare configs" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
+                        <div className="flex items-center gap-2 text-sm min-w-0">
+                            <DocumentDuplicateIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{diffCfgs[0].name}</span>
+                            <span className="text-[var(--text-muted)] shrink-0">↔</span>
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{diffCfgs[1].name}</span>
+                        </div>
+                        <button onClick={() => setDiffCfgs(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 shrink-0" aria-label="Close" title="Close">
+                            <XMarkIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        <DiffEditor
+                            height="100%"
+                            language="json"
+                            theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'}
+                            original={JSON.stringify(diffCfgs[0].config_json ?? {}, null, 2)}
+                            modified={JSON.stringify(diffCfgs[1].config_json ?? {}, null, 2)}
+                            options={{ readOnly: true, renderSideBySide: true, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+                        />
+                    </div>
                 </div>
             </div>,
             document.body,
