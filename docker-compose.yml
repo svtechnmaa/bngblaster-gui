@@ -45,7 +45,10 @@ services:
 
   frontend:
     image: frontend:latest
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_BASE_PATH: "/"
     container_name: bngweb-frontend
     depends_on:
       - backend
