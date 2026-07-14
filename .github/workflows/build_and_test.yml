@@ -177,7 +177,7 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        docker compose -f docker-compose.yml up -d
+        docker compose -f docker-compose.yml up -d --build
     - name: Wait for services to be healthy
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 

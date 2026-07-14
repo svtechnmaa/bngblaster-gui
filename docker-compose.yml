@@ -48,7 +48,7 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_BASE_PATH: "/"
+        VITE_BASE_PATH: "/bngblaster-gui/"
     container_name: bngweb-frontend
     depends_on:
       - backend
