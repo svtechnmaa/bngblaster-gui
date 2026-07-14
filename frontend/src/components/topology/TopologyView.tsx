@@ -21,15 +21,15 @@ function vlanRange(a: AccessIface): string | null {
 
 function Chip({ label, onClick, active, color = 'cyan' }: {
     label: string; onClick?: () => void; active?: boolean;
-    color?: 'cyan' | 'purple' | 'green' | 'orange' | 'pink';
+    color?: 'cyan' | 'purple' | 'green' | 'blue' | 'slate';
 }) {
     const base = 'inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border cursor-pointer transition-colors';
     const colorMap = {
-        cyan:   active ? 'bg-cyan-600 text-white border-cyan-600'     : 'bg-cyan-50 text-cyan-700 border-cyan-200 hover:bg-cyan-100',
-        purple: active ? 'bg-purple-600 text-white border-purple-600' : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-        green:  active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100',
-        orange: active ? 'bg-orange-600 text-white border-orange-600' : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100',
-        pink:   active ? 'bg-pink-600 text-white border-pink-600'     : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100',
+        cyan:   active ? 'bg-cyan-600 text-white border-cyan-600'     : 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30 hover:bg-cyan-500/25',
+        purple: active ? 'bg-purple-600 text-white border-purple-600' : 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 hover:bg-purple-500/25',
+        green:  active ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25',
+        blue:   active ? 'bg-blue-600 text-white border-blue-600'     : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 hover:bg-blue-500/25',
+        slate:  active ? 'bg-slate-600 text-white border-slate-600'   : 'bg-slate-500/15 text-[var(--text-secondary)] border-slate-500/30 hover:bg-slate-500/25',
     };
     return (
         <button type="button" onClick={onClick} className={`${base} ${colorMap[color]}`}>
@@ -46,7 +46,7 @@ function KV({ k, v }: { k: string; v: unknown }) {
     if (typeof v === 'object') rendered = <pre className="text-xs whitespace-pre-wrap break-all m-0">{JSON.stringify(v, null, 2)}</pre>;
     else rendered = <span className="text-xs break-all">{String(v)}</span>;
     return (
-        <div className="flex gap-2 py-0.5">
+        <div className="flex gap-2 py-1">
             <span className="text-xs font-medium text-[var(--text-muted)] min-w-[140px]">{k}</span>
             {rendered}
         </div>
@@ -106,14 +106,14 @@ export default function TopologyView({ configJson }: { configJson: unknown }) {
             ) : (
                 <div className="space-y-2 mb-3">
                     {ifaces.map((i, idx) => (
-                        <div key={idx} className="text-xs bg-[var(--bg-primary)] rounded px-2 py-1.5 border border-[var(--border-color)]">
+                        <div key={idx} className="text-xs bg-[var(--bg-primary)] rounded px-3 py-2 border border-[var(--border-color)]">
                             <div className="font-mono font-semibold text-[var(--text-primary)]">{formatIface(i)}</div>
                             {i.address && <div className="text-[var(--text-muted)]">{i.address}{i.gateway ? ` → ${i.gateway}` : ''}</div>}
                             {side === 'access' && (
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                    {(i as AccessIface).type && <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 text-[10px] font-medium">{(i as AccessIface).type}</span>}
-                                    {vlanRange(i as AccessIface) && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">{vlanRange(i as AccessIface)}</span>}
-                                    {(i as AccessIface)['vlan-mode'] && <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-medium">{(i as AccessIface)['vlan-mode']}</span>}
+                                    {(i as AccessIface).type && <span className="px-1.5 py-0.5 rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 text-[10px] font-medium">{(i as AccessIface).type}</span>}
+                                    {vlanRange(i as AccessIface) && <span className="px-1.5 py-0.5 rounded bg-slate-500/15 text-[var(--text-secondary)] text-[10px] font-medium">{vlanRange(i as AccessIface)}</span>}
+                                    {(i as AccessIface)['vlan-mode'] && <span className="px-1.5 py-0.5 rounded bg-slate-500/15 text-[var(--text-secondary)] text-[10px] font-medium">{(i as AccessIface)['vlan-mode']}</span>}
                                 </div>
                             )}
                         </div>
@@ -146,7 +146,7 @@ export default function TopologyView({ configJson }: { configJson: unknown }) {
     return (
         <div className="space-y-4 max-w-5xl mx-auto">
             {/* Topology diagram */}
-            <div className="flex items-stretch gap-2">
+            <div className="flex flex-col md:flex-row md:items-stretch gap-4 md:gap-6">
                 {renderNode('network', topo.network, netProtos, 'cyan')}
 
                 {/* Link + DUT */}
@@ -157,7 +157,7 @@ export default function TopologyView({ configJson }: { configJson: unknown }) {
                     </div>
                     <div className="mt-2 space-y-1 text-center">
                         {sessionCount !== undefined && (
-                            <Chip label={`Sessions: ${sessionCount}`} onClick={() => toggle('sessions')} active={selected === 'sessions'} color="orange" />
+                            <Chip label={`Sessions: ${sessionCount}`} onClick={() => toggle('sessions')} active={selected === 'sessions'} color="cyan" />
                         )}
                         {streamCount > 0 && (
                             <div><Chip label={`Streams: ${streamCount}`} onClick={() => toggle('streams')} active={selected === 'streams'} color="green" /></div>
@@ -169,7 +169,7 @@ export default function TopologyView({ configJson }: { configJson: unknown }) {
                             <div><Chip label="Traffic cfg" onClick={() => toggle('traffic')} active={selected === 'traffic'} color="green" /></div>
                         )}
                         {linkProtos.map(k => (
-                            <div key={k}><Chip label={`${k} · ${protocolSummary(k, topo.protocols[k as keyof typeof topo.protocols])}`} onClick={() => toggle(k)} active={selected === k} color="pink" /></div>
+                            <div key={k}><Chip label={`${k} · ${protocolSummary(k, topo.protocols[k as keyof typeof topo.protocols])}`} onClick={() => toggle(k)} active={selected === k} color="slate" /></div>
                         ))}
                     </div>
                 </div>

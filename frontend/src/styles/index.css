@@ -356,8 +356,8 @@ textarea.form-input { resize: vertical; }
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 .input-field:focus {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(8,145,178,0.15);
 }
 [data-theme="dark"] .input-field {
   background: rgba(255,255,255,0.05);
