@@ -197,6 +197,7 @@ export default function BNGBlasterPage() {
     const [configs, setConfigs] = useState<BNGConfig[]>([]);
     const [editingCfg, setEditingCfg] = useState<BNGConfig | null>(null);
     const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState<{ done: number; total: number } | null>(null);
     const [cfgName, setCfgName] = useState('');
     const [cfgDesc, setCfgDesc] = useState('');
     const [cfgTags, setCfgTags] = useState<string[]>([]);
@@ -588,13 +589,28 @@ export default function BNGBlasterPage() {
         const prompt = `Delete ${deletable.length} config(s)?` + (skipped ? ` (${skipped} skipped — no permission)` : '');
         if (!confirm(prompt)) return;
         const ids = deletable.map(c => c.id);
-        const results = await Promise.allSettled(ids.map(id => api.delete(`/bngblaster/configs/${id}`)));
-        const okIds = new Set(ids.filter((_, i) => results[i].status === 'fulfilled'));
-        const failed = results.length - okIds.size;
-        setConfigs(cs => cs.filter(c => !okIds.has(c.id)));
-        if (editingCfg && okIds.has(editingCfg.id)) startNewConfig();
+        // Delete in small sequential batches (one transaction per batch) instead of
+        // firing one request per config — 500 concurrent DELETEs saturate the backend.
+        const CHUNK = 50;
+        const deleted = new Set<number>();
+        let failedBatches = 0;
+        setBulkDeleting({ done: 0, total: ids.length });
+        try {
+            for (let i = 0; i < ids.length; i += CHUNK) {
+                const slice = ids.slice(i, i + CHUNK);
+                try {
+                    const r = await api.post('/bngblaster/configs/bulk-delete', { ids: slice });
+                    (r.data?.deleted_ids as number[] | undefined)?.forEach(id => deleted.add(id));
+                } catch { failedBatches++; }
+                setBulkDeleting({ done: Math.min(i + CHUNK, ids.length), total: ids.length });
+            }
+        } finally {
+            setBulkDeleting(null);
+        }
+        setConfigs(cs => cs.filter(c => !deleted.has(c.id)));
+        if (editingCfg && deleted.has(editingCfg.id)) startNewConfig();
         clearCfgSelection();
-        if (failed) showErr(`${failed} config(s) failed to delete`);
+        if (failedBatches) showErr(`${failedBatches} batch(es) failed — ${deleted.size}/${ids.length} deleted`);
     };
 
     const importFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1551,6 +1567,7 @@ export default function BNGBlasterPage() {
                                                 const visibleIds = visible.map(v => v.id);
                                                 const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedCfgIds.has(id));
                                                 const selCount = selectedCfgIds.size;
+                                                const filterActive = savedCfgSearch.trim() !== '' || savedCfgFilter !== 'all' || ownerFilter !== 'all' || selectedTags.length > 0;
                                                 return (
                                                     <div className="space-y-2">
                                                         {/* Bulk selection bar */}
@@ -1566,10 +1583,21 @@ export default function BNGBlasterPage() {
                                                                         return next;
                                                                     })}
                                                                     className="rounded border-[var(--border-color)] text-cyan-500 focus:ring-cyan-400"
+                                                                    title={filterActive ? 'Select all configs matching the current filters' : 'Select all configs'}
                                                                 />
-                                                                Select all
+                                                                Select all {visibleIds.length}{filterActive ? ' filtered' : ''}
                                                             </label>
-                                                            {selCount > 0 && (
+                                                            {bulkDeleting ? (
+                                                                <>
+                                                                    <span className="text-[11px] font-semibold text-red-600 dark:text-red-400 shrink-0">
+                                                                        Deleting {Math.round((bulkDeleting.done / Math.max(1, bulkDeleting.total)) * 100)}%
+                                                                    </span>
+                                                                    <div className="flex-1 h-1.5 rounded-full bg-[var(--bg-hover)] overflow-hidden">
+                                                                        <div className="h-full bg-red-500 transition-[width] duration-200" style={{ width: `${(bulkDeleting.done / Math.max(1, bulkDeleting.total)) * 100}%` }} />
+                                                                    </div>
+                                                                    <span className="text-[11px] tabular-nums text-[var(--text-muted)] shrink-0">{bulkDeleting.done}/{bulkDeleting.total}</span>
+                                                                </>
+                                                            ) : selCount > 0 && (
                                                                 <>
                                                                     <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">{selCount} selected</span>
                                                                     <div className="flex-1" />

@@ -489,6 +489,35 @@ def delete_config(
     return {"ok": True}
 
 
+@router.post("/configs/bulk-delete")
+def bulk_delete_configs(
+    data: dict = Body(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Delete many configs in a single transaction. Only rows the user may
+    delete (their own, or any for admins) are removed; the rest are skipped.
+    Returns the ids actually deleted so the client can reconcile its list."""
+    raw = data.get("ids") or []
+    ids = [int(i) for i in raw if isinstance(i, int) or (isinstance(i, str) and i.isdigit())]
+    if not ids:
+        return {"deleted": 0, "skipped": 0, "deleted_ids": []}
+    if len(ids) > 1000:
+        raise HTTPException(status_code=400, detail="Too many ids in one request (max 1000)")
+    rows = db.query(BNGConfig).filter(BNGConfig.id.in_(ids)).all()
+    is_admin = current_user.role == "admin"
+    deletable = [c for c in rows if is_admin or c.user_id == current_user.id]
+    deleted_ids = [int(c.id) for c in deletable]
+    for c in deletable:
+        db.delete(c)
+    db.commit()
+    return {
+        "deleted": len(deleted_ids),
+        "skipped": len(rows) - len(deletable),
+        "deleted_ids": deleted_ids,
+    }
+
+
 # ── BNG server proxy endpoints ────────────────────────────────────────────────
 
 
