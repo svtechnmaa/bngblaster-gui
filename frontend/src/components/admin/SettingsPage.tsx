@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 import api from '../../services/api';
+import { confirmDialog } from '../../store/useConfirmStore';
 
 interface GitSettings {
     git_repo_url: string;
@@ -102,7 +103,7 @@ export default function SettingsPage() {
     };
 
     const handleBackup = async () => {
-        if (!confirm('Backup ALL configs (from every user) to the configured Git repo?')) return;
+        if (!(await confirmDialog({ title: 'Back up all configs', message: 'Back up ALL configs (from every user) to the configured Git repo?', confirmLabel: 'Back up' }))) return;
         setBacking(true);
         setBackupResult(null);
         try {
@@ -117,7 +118,7 @@ export default function SettingsPage() {
     };
 
     const handleRestore = async () => {
-        if (!confirm('Restore configs from the Git repo? Existing configs (same name) are left untouched; only missing ones are created.')) return;
+        if (!(await confirmDialog({ title: 'Restore from Git', message: 'Restore configs from the Git repo?\nExisting configs (same name) are left untouched; only missing ones are created.', confirmLabel: 'Restore' }))) return;
         setRestoring(true);
         setRestoreResult(null);
         try {

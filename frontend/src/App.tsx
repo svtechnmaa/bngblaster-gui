@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import BNGBlasterPage from './components/BNGBlasterPage';
+import ConfirmDialog from './components/ConfirmDialog';
 import Login from './components/Login';
 import OAuthCallback from './components/OAuthCallback';
 import TopBar from './components/TopBar';
@@ -46,6 +47,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className="min-h-screen flex flex-col bg-[var(--bg-primary)]">
             <TopBar />
             <main className="flex-1 overflow-y-auto max-w-[1600px] mx-auto w-full px-3 sm:px-4 lg:px-6 py-4">{children}</main>
+            <ConfirmDialog />
         </div>
     );
 }

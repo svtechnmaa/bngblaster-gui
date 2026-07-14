@@ -27,6 +27,7 @@ import DashboardTab from './dashboard/DashboardTab';
 import TopologyView from './topology/TopologyView';
 import { useAuthStore } from '../store/useAuthStore';
 import { useTelemetryStore } from '../store/useTelemetryStore';
+import { confirmDialog } from '../store/useConfirmStore';
 import { can, type Role } from '../utils/permissions';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -350,7 +351,7 @@ export default function BNGBlasterPage() {
     };
 
     const handleDeleteServer = async (id: number) => {
-        if (!confirm('Delete this server?')) return;
+        if (!(await confirmDialog({ title: 'Delete server', message: 'Delete this server?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/bngblaster/servers/${id}`);
             setServers(s => s.filter(x => x.id !== id));
@@ -510,7 +511,7 @@ export default function BNGBlasterPage() {
     };
 
     const handleDeleteConfig = async (id: number) => {
-        if (!confirm('Delete this config?')) return;
+        if (!(await confirmDialog({ title: 'Delete config', message: 'Delete this config?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/bngblaster/configs/${id}`);
             setConfigs(cs => cs.filter(c => c.id !== id));
@@ -587,7 +588,7 @@ export default function BNGBlasterPage() {
         if (deletable.length === 0) { showErr('You have no permission to delete the selected configs'); return; }
         const skipped = chosen.length - deletable.length;
         const prompt = `Delete ${deletable.length} config(s)?` + (skipped ? ` (${skipped} skipped — no permission)` : '');
-        if (!confirm(prompt)) return;
+        if (!(await confirmDialog({ title: 'Delete configs', message: prompt, confirmLabel: 'Delete', danger: true }))) return;
         const ids = deletable.map(c => c.id);
         // Delete in small sequential batches (one transaction per batch) instead of
         // firing one request per config — 500 concurrent DELETEs saturate the backend.
@@ -731,7 +732,7 @@ export default function BNGBlasterPage() {
 
     const handleKill = async (instance: string) => {
         if (!selServer) return;
-        if (!confirm(`Force-kill "${instance}"? The report may not be generated.`)) return;
+        if (!(await confirmDialog({ title: 'Force-kill instance', message: `Force-kill "${instance}"? The report may not be generated.`, confirmLabel: 'Force kill', danger: true }))) return;
         setInstLoading(instance, 'kill', true);
         try {
             await api.post(`/bngblaster/servers/${selServer.id}/instances/${instance}/kill`);

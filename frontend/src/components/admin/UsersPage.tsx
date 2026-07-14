@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../../services/api';
+import { confirmDialog } from '../../store/useConfirmStore';
 
 interface User {
     id: number;
@@ -40,7 +41,7 @@ export default function UsersPage() {
     };
 
     const deleteUser = async (id: number, username: string) => {
-        if (!confirm(`Delete user "${username}"?`)) return;
+        if (!(await confirmDialog({ title: 'Delete user', message: `Delete user "${username}"? This cannot be undone.`, confirmLabel: 'Delete', danger: true }))) return;
         try {
             await api.delete(`/auth/users/${id}`);
             toast.success('User deleted');
