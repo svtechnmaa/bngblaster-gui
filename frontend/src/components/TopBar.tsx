@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { MoonIcon, SunIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../store/useAuthStore';
+import { useThemeStore } from '../store/useThemeStore';
 import { can, type Role } from '../utils/permissions';
 import InstrumentRail from './InstrumentRail';
 
 export default function TopBar() {
     const { user, logout } = useAuthStore();
+    const theme = useThemeStore(s => s.theme);
+    const toggleTheme = useThemeStore(s => s.toggle);
     const [menuOpen, setMenuOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const navigate = useNavigate();
@@ -53,8 +57,19 @@ export default function TopBar() {
                 )}
             </div>
 
+            {/* Right: theme toggle + user */}
+            <div className="flex items-center gap-1 shrink-0">
+            <button
+                onClick={toggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                className="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/70"
+            >
+                {theme === 'dark' ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+            </button>
+
             {/* User */}
-            <div className="relative shrink-0" ref={menuRef}>
+            <div className="relative" ref={menuRef}>
                 <button
                     onClick={() => setMenuOpen(o => !o)}
                     className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
@@ -104,6 +119,7 @@ export default function TopBar() {
                         </button>
                     </div>
                 )}
+            </div>
             </div>
         </header>
     );

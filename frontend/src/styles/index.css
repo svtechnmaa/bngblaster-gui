@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Drive Tailwind's dark: variant off the app's [data-theme="dark"] attribute
+   (toggled by the theme switch) instead of the OS prefers-color-scheme, so it
+   agrees with the CSS-variable tokens below. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 /* ══════════════════════════════════════════════════════════
    Design Tokens
    ══════════════════════════════════════════════════════════ */
