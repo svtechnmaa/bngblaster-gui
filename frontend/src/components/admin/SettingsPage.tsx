@@ -10,6 +10,7 @@ import {
     ExclamationTriangleIcon, KeyIcon, LinkIcon,
 } from '@heroicons/react/24/outline';
 
+import { toast } from 'sonner';
 import api from '../../services/api';
 import { confirmDialog } from '../../store/useConfirmStore';
 
@@ -52,7 +53,6 @@ export default function SettingsPage() {
     const [testing, setTesting] = useState(false);
     const [backing, setBacking] = useState(false);
     const [restoring, setRestoring] = useState(false);
-    const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
     const [backupResult, setBackupResult] = useState<BackupResult | null>(null);
     const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
 
@@ -63,12 +63,12 @@ export default function SettingsPage() {
                 setRepoUrl(r.data.git_repo_url || '');
                 setBranch(r.data.git_branch || 'main');
             })
-            .catch(e => setMsg({ type: 'err', text: e.response?.data?.detail || 'Failed to load settings' }));
+            .catch(e => toast.error(e.response?.data?.detail || 'Failed to load settings'));
     }, []);
 
-    const showMsg = (type: 'ok' | 'err', text: string, ms = 5000) => {
-        setMsg({ type, text });
-        setTimeout(() => setMsg(null), ms);
+    const showMsg = (type: 'ok' | 'err', text: string) => {
+        if (type === 'ok') toast.success(text);
+        else toast.error(text);
     };
 
     const handleSave = async () => {
@@ -229,16 +229,6 @@ export default function SettingsPage() {
                         </button>
                     </div>
 
-                    {msg && (
-                        <div className={`text-xs flex items-start gap-1.5 p-2 rounded border ${
-                            msg.type === 'ok'
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                                : 'bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400'
-                        }`}>
-                            {msg.type === 'ok' ? <CheckCircleIcon className="w-4 h-4 shrink-0" /> : <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />}
-                            <span>{msg.text}</span>
-                        </div>
-                    )}
                 </div>
             </section>
 

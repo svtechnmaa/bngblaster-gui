@@ -10,7 +10,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import Editor from '@monaco-editor/react';
+import Editor, { DiffEditor } from '@monaco-editor/react';
+import { toast } from 'sonner';
 import {
     BoltIcon, PlusIcon, TrashIcon, PlayCircleIcon,
     StopCircleIcon, ExclamationTriangleIcon, DocumentTextIcon,
@@ -199,6 +200,7 @@ export default function BNGBlasterPage() {
     const [editingCfg, setEditingCfg] = useState<BNGConfig | null>(null);
     const [selectedCfgIds, setSelectedCfgIds] = useState<Set<number>>(new Set());
     const [bulkDeleting, setBulkDeleting] = useState<{ done: number; total: number } | null>(null);
+    const [diffCfgs, setDiffCfgs] = useState<[BNGConfig, BNGConfig] | null>(null);
     const [cfgName, setCfgName] = useState('');
     const [cfgDesc, setCfgDesc] = useState('');
     const [cfgTags, setCfgTags] = useState<string[]>([]);
@@ -269,7 +271,6 @@ export default function BNGBlasterPage() {
     const [restartingInstance, setRestartingInstance] = useState<string | null>(null);
 
     // ── Error banner ─────────────────────────────────────────────────────
-    const [globalError, setGlobalError] = useState('');
 
     // ── Default SSH credentials (saved in DB, managed in Servers tab) ────
     const [defaultSshUser, setDefaultSshUser] = useState('');
@@ -333,7 +334,8 @@ export default function BNGBlasterPage() {
 
     // ── Helpers ───────────────────────────────────────────────────────────
 
-    const showErr = (msg: string) => { setGlobalError(msg); setTimeout(() => setGlobalError(''), 5000); };
+    const showErr = (msg: string) => toast.error(msg);
+    const showOk = (msg: string) => toast.success(msg);
 
     // ── Servers CRUD ──────────────────────────────────────────────────────
 
@@ -505,6 +507,7 @@ export default function BNGBlasterPage() {
                 const r = await api.post('/bngblaster/configs', { name: cfgName.trim(), description: cfgDesc, tags: cfgTags, config_json: parsed });
                 setConfigs(cs => [r.data, ...cs]);
             }
+            showOk(editingCfg ? 'Config updated' : 'Config created');
             startNewConfig();
         } catch (e: any) { setCfgError(e.response?.data?.detail || 'Save failed'); }
         finally { setCfgSaving(false); }
@@ -612,6 +615,7 @@ export default function BNGBlasterPage() {
         if (editingCfg && deleted.has(editingCfg.id)) startNewConfig();
         clearCfgSelection();
         if (failedBatches) showErr(`${failedBatches} batch(es) failed — ${deleted.size}/${ids.length} deleted`);
+        else showOk(`Deleted ${deleted.size} config(s)`);
     };
 
     const importFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -951,6 +955,14 @@ export default function BNGBlasterPage() {
         return () => window.removeEventListener('keydown', onKey);
     }, [topologyModalCfg]);
 
+    // Escape-to-close for the config compare (diff) modal
+    useEffect(() => {
+        if (!diffCfgs) return;
+        const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setDiffCfgs(null); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [diffCfgs]);
+
     // Auto-scroll log to bottom whenever new log content is loaded
     useEffect(() => {
         if (logPreRef.current && logText) {
@@ -1050,12 +1062,6 @@ export default function BNGBlasterPage() {
     // ── Render ────────────────────────────────────────────────────────────
     return (
         <div className="space-y-4 animate-fade-in">
-            {globalError && (
-                <div className="glass-card p-3 flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-xs">
-                    <ExclamationTriangleIcon className="w-4 h-4 shrink-0" />
-                    {globalError}
-                </div>
-            )}
 
             {/* Tabs */}
             <div className="glass-card overflow-hidden">
@@ -1618,6 +1624,18 @@ export default function BNGBlasterPage() {
                                                                 <>
                                                                     <span className="text-[11px] font-semibold text-cyan-600 dark:text-cyan-400">{selCount} selected</span>
                                                                     <div className="flex-1" />
+                                                                    {selCount === 2 && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const pair = configs.filter(c => selectedCfgIds.has(c.id));
+                                                                                if (pair.length === 2) setDiffCfgs([pair[0], pair[1]]);
+                                                                            }}
+                                                                            className="btn-secondary text-xs"
+                                                                            title="Compare the two selected configs"
+                                                                        >
+                                                                            <DocumentDuplicateIcon className="w-3 h-3" />Compare
+                                                                        </button>
+                                                                    )}
                                                                     <button onClick={handleBulkDownload} className="btn-secondary text-xs" title="Download each selected config (.json)">
                                                                         <ArrowDownTrayIcon className="w-3 h-3" />Download
                                                                     </button>
@@ -2775,6 +2793,36 @@ export default function BNGBlasterPage() {
                         </button>
                     </div>
                     <TopologyView configJson={topologyModalCfg.config_json} />
+                </div>
+            </div>,
+            document.body,
+        )}
+
+        {/* Config compare (diff) modal — from Configs tab, exactly 2 selected */}
+        {diffCfgs && createPortal(
+            <div className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4" onClick={() => setDiffCfgs(null)}>
+                <div className="bg-[var(--bg-card)] rounded-xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="Compare configs" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-color)]">
+                        <div className="flex items-center gap-2 text-sm min-w-0">
+                            <DocumentDuplicateIcon className="w-4 h-4 text-cyan-600 dark:text-cyan-400 shrink-0" />
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{diffCfgs[0].name}</span>
+                            <span className="text-[var(--text-muted)] shrink-0">↔</span>
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{diffCfgs[1].name}</span>
+                        </div>
+                        <button onClick={() => setDiffCfgs(null)} className="text-[var(--text-muted)] hover:text-[var(--text-primary)] p-1 shrink-0" aria-label="Close" title="Close">
+                            <XMarkIcon className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="flex-1 min-h-0">
+                        <DiffEditor
+                            height="100%"
+                            language="json"
+                            theme={document.documentElement.getAttribute('data-theme') === 'dark' ? 'vs-dark' : 'vs'}
+                            original={JSON.stringify(diffCfgs[0].config_json ?? {}, null, 2)}
+                            modified={JSON.stringify(diffCfgs[1].config_json ?? {}, null, 2)}
+                            options={{ readOnly: true, renderSideBySide: true, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+                        />
+                    </div>
                 </div>
             </div>,
             document.body,
