@@ -25,11 +25,9 @@ interface BackupResult {
     repo: string;
     branch: string;
     total: number;
-    created: number;
-    updated: number;
-    unchanged: number;
-    failed: number;
-    details: { name: string; owner: string; status: string; error?: string }[];
+    committed: boolean;
+    commit_sha: string | null;
+    message: string;
     timestamp: string;
 }
 
@@ -109,7 +107,7 @@ export default function SettingsPage() {
         try {
             const r = await api.post('/admin/settings/git/backup');
             setBackupResult(r.data);
-            showMsg('ok', `Backup complete: ${r.data.created} created · ${r.data.updated} updated · ${r.data.unchanged} unchanged${r.data.failed ? ` · ${r.data.failed} failed` : ''}`);
+            showMsg('ok', r.data.message || 'Backup complete');
         } catch (e: any) {
             showMsg('err', e.response?.data?.detail || 'Backup failed');
         } finally {
@@ -236,51 +234,22 @@ export default function SettingsPage() {
             {backupResult && (
                 <section className="bg-[var(--bg-card)] border border-[var(--border-color)] rounded-xl p-5 shadow-[var(--shadow-sm)]">
                     <h3 className="text-sm font-semibold mb-3">Last backup result</h3>
-                    <div className="grid grid-cols-4 gap-3 text-center mb-3">
-                        <div className="p-2 rounded bg-emerald-500/10 border border-emerald-500/30">
-                            <div className="text-xs text-emerald-600 dark:text-emerald-400">Created</div>
-                            <div className="text-lg font-semibold text-emerald-600 dark:text-emerald-300">{backupResult.created}</div>
-                        </div>
-                        <div className="p-2 rounded bg-[var(--bg-hover)] border border-[var(--border-color)]">
-                            <div className="text-xs text-[var(--text-muted)]">Updated</div>
-                            <div className="text-lg font-semibold text-[var(--text-primary)]">{backupResult.updated}</div>
-                        </div>
-                        <div className="p-2 rounded bg-[var(--bg-hover)] border border-[var(--border-color)]">
-                            <div className="text-xs text-[var(--text-muted)]">Unchanged</div>
-                            <div className="text-lg font-semibold text-[var(--text-primary)]">{backupResult.unchanged}</div>
-                        </div>
-                        <div className={`p-2 rounded ${backupResult.failed ? 'bg-red-500/10 border border-red-500/30' : 'bg-[var(--bg-hover)] border border-[var(--border-color)]'}`}>
-                            <div className={`text-xs ${backupResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-muted)]'}`}>Failed</div>
-                            <div className={`text-lg font-semibold ${backupResult.failed ? 'text-red-600 dark:text-red-400' : 'text-[var(--text-primary)]'}`}>{backupResult.failed}</div>
-                        </div>
+                    <div className="flex items-center gap-2 mb-3">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${
+                            backupResult.committed
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                : 'bg-[var(--bg-hover)] text-[var(--text-muted)]'
+                        }`}>
+                            <CheckCircleIcon className="w-4 h-4" />
+                            {backupResult.committed ? '1 commit' : 'No changes'}
+                        </span>
+                        <span className="text-sm text-[var(--text-primary)]">{backupResult.message}</span>
                     </div>
-                    <p className="text-xs text-[var(--text-muted)] mb-2">
-                        Repo: <code>{backupResult.repo}</code> · Branch: <code>{backupResult.branch}</code> · {new Date(backupResult.timestamp).toLocaleString()}
+                    <p className="text-xs text-[var(--text-muted)]">
+                        <strong>{backupResult.total}</strong> config(s) · Repo <code>{backupResult.repo}</code> · Branch <code>{backupResult.branch}</code>
+                        {backupResult.commit_sha && <> · Commit <code>{backupResult.commit_sha.slice(0, 7)}</code></>}
+                        {' · '}{new Date(backupResult.timestamp).toLocaleString()}
                     </p>
-                    <details className="text-xs">
-                        <summary className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-primary)]">
-                            View per-file details ({backupResult.details.length})
-                        </summary>
-                        <table className="w-full mt-2 text-xs">
-                            <thead className="text-[var(--text-muted)]">
-                                <tr><th className="text-left py-1">Config</th><th className="text-left">Owner</th><th className="text-left">Status</th><th className="text-left">Error</th></tr>
-                            </thead>
-                            <tbody>
-                                {backupResult.details.map((d, i) => (
-                                    <tr key={i} className="border-t border-[var(--border-color)]">
-                                        <td className="py-1 font-mono">{d.name}</td>
-                                        <td>@{d.owner}</td>
-                                        <td className={
-                                            d.status === 'failed' ? 'text-red-600' :
-                                            d.status === 'created' ? 'text-emerald-600' :
-                                            d.status === 'updated' ? 'text-blue-600' : 'text-slate-500'
-                                        }>{d.status}</td>
-                                        <td className="text-red-500 truncate max-w-xs">{d.error || ''}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </details>
                 </section>
             )}
 

@@ -227,155 +227,115 @@ async def test_git_connection(
     }
 
 
-async def _put_file(
-    client: httpx.AsyncClient,
-    owner: str,
-    repo: str,
-    path: str,
-    content_str: str,
-    branch: str,
-    commit_message: str,
-    token: str,
-) -> str:
-    """PUT /repos/{owner}/{repo}/contents/{path}. Return 'created' | 'updated' | 'unchanged'."""
-    headers = _gh_headers(token)
-    # First try to get existing sha
-    r = await client.get(
-        f"{GITHUB_API}/repos/{owner}/{repo}/contents/{path}",
-        headers=headers,
-        params={"ref": branch},
-    )
-    existing_sha: str | None = None
-    existing_content: str | None = None
-    if r.status_code == 200:
-        meta = r.json()
-        if isinstance(meta, dict):
-            existing_sha = meta.get("sha")
-            if meta.get("encoding") == "base64" and meta.get("content"):
-                try:
-                    existing_content = base64.b64decode(meta["content"]).decode()
-                except Exception:
-                    existing_content = None
-    elif r.status_code not in (404,):
-        raise HTTPException(status_code=502, detail=f"GitHub GET failed ({r.status_code}): {r.text[:200]}")
-
-    if existing_content is not None and existing_content == content_str:
-        return "unchanged"
-
-    body: dict[str, Any] = {
-        "message": commit_message,
-        "content": base64.b64encode(content_str.encode()).decode(),
-        "branch": branch,
-    }
-    if existing_sha:
-        body["sha"] = existing_sha
-
-    r = await client.put(
-        f"{GITHUB_API}/repos/{owner}/{repo}/contents/{path}",
-        headers=headers,
-        json=body,
-    )
-    if r.status_code not in (200, 201):
-        raise HTTPException(status_code=502, detail=f"GitHub PUT failed ({r.status_code}): {r.text[:200]}")
-
-    return "updated" if existing_sha else "created"
-
-
 @router.post("/git/backup")
 async def backup_configs_to_git(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    """Push every saved BNGBlaster config to the configured Git repo.
+    """Push every saved BNGBlaster config to the configured Git repo in a SINGLE
+    commit via the Git Data API (tree → commit → ref), instead of one commit per
+    file. Re-running with no changes produces no commit.
 
-    Layout: /configs/{owner_username}/{safe_name}.json       — raw config_json
-            /configs/{owner_username}/{safe_name}.meta.json  — metadata sidecar
+    Layout: configs/{owner_username}/{safe_name}.json       — raw config_json
+            configs/{owner_username}/{safe_name}.meta.json  — metadata sidecar
     """
     s = _get_or_create(db)
     owner, repo, token, branch = _require_git_config(s)
+    headers = _gh_headers(token)
 
     configs = db.query(BNGConfig).all()
-    # Build owner_id → username map
     owner_ids = list({c.user_id for c in configs})
     owner_map: dict[int, str] = {}
     if owner_ids:
         rows = db.query(User.id, User.username).filter(User.id.in_(owner_ids)).all()
         owner_map = {r.id: r.username for r in rows}
 
-    results: list[dict[str, Any]] = []
-    counts = {"created": 0, "updated": 0, "unchanged": 0, "failed": 0}
-    timestamp = datetime.now(UTC).isoformat()
-    commit_msg = f"Backup BNG configs ({len(configs)} items) by {current_user.username} @ {timestamp}"
-
-    async with httpx.AsyncClient(timeout=30.0) as client:
-        for c in configs:
-            owner_username = owner_map.get(int(c.user_id), "unknown")
-            folder = _safe_username(owner_username)
-            slug = _safe_filename(str(c.name))
-            raw_path = f"configs/{folder}/{slug}.json"
-            meta_path = f"configs/{folder}/{slug}.meta.json"
-
-            raw_content = json.dumps(c.config_json or {}, indent=2, ensure_ascii=False) + "\n"
-            meta_content = (
-                json.dumps(
-                    {
-                        "name": c.name,
-                        "description": c.description or "",
-                        "owner": owner_username,
-                        "updated_at": c.updated_at.isoformat() if c.updated_at else None,
-                        "exported_by": current_user.username,
-                        "exported_at": timestamp,
-                    },
-                    indent=2,
-                    ensure_ascii=False,
-                )
-                + "\n"
+    # Stable content only (no volatile timestamps) so an unchanged backup yields
+    # an identical tree — and therefore no commit.
+    files: dict[str, str] = {}
+    for c in configs:
+        owner_username = owner_map.get(int(c.user_id), "unknown")
+        folder = _safe_username(owner_username)
+        slug = _safe_filename(str(c.name))
+        files[f"configs/{folder}/{slug}.json"] = json.dumps(c.config_json or {}, indent=2, ensure_ascii=False) + "\n"
+        files[f"configs/{folder}/{slug}.meta.json"] = (
+            json.dumps(
+                {
+                    "name": c.name,
+                    "description": c.description or "",
+                    "owner": owner_username,
+                    "tags": list(c.tags or []),
+                    "updated_at": c.updated_at.isoformat() if c.updated_at else None,
+                },
+                indent=2,
+                ensure_ascii=False,
             )
+            + "\n"
+        )
 
-            try:
-                raw_status = await _put_file(
-                    client,
-                    owner,
-                    repo,
-                    raw_path,
-                    raw_content,
-                    branch,
-                    commit_msg,
-                    token,
-                )
-                meta_status = await _put_file(
-                    client,
-                    owner,
-                    repo,
-                    meta_path,
-                    meta_content,
-                    branch,
-                    commit_msg,
-                    token,
-                )
-                # Overall status for the config = worst of the two file statuses
-                order = ["unchanged", "updated", "created"]
-                overall = max((raw_status, meta_status), key=lambda x: order.index(x))
-                counts[overall] += 1
-                results.append({"name": c.name, "owner": owner_username, "status": overall})
-            except HTTPException as exc:
-                counts["failed"] += 1
-                results.append(
-                    {
-                        "name": c.name,
-                        "owner": owner_username,
-                        "status": "failed",
-                        "error": str(exc.detail)[:200],
-                    }
-                )
+    timestamp = datetime.now(UTC).isoformat()
+    commit_msg = f"Backup {len(configs)} BNG configs by {current_user.username}"
+
+    def _bad(resp: httpx.Response, what: str) -> HTTPException:
+        return HTTPException(status_code=502, detail=f"GitHub {what} failed ({resp.status_code}): {resp.text[:200]}")
+
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        # 1. Resolve the branch head (base commit + tree). 404/409 = unborn branch.
+        base_commit_sha: str | None = None
+        base_tree_sha: str | None = None
+        ref_url = f"{GITHUB_API}/repos/{owner}/{repo}/git/ref/heads/{branch}"
+        r = await client.get(ref_url, headers=headers)
+        if r.status_code == 200:
+            base_commit_sha = r.json().get("object", {}).get("sha")
+            rc = await client.get(f"{GITHUB_API}/repos/{owner}/{repo}/git/commits/{base_commit_sha}", headers=headers)
+            if rc.status_code != 200:
+                raise _bad(rc, "commit lookup")
+            base_tree_sha = rc.json().get("tree", {}).get("sha")
+        elif r.status_code not in (404, 409):
+            raise _bad(r, "ref lookup")
+
+        # 2. One tree with every file (base_tree preserves anything else in the repo).
+        tree = [{"path": p, "mode": "100644", "type": "blob", "content": content} for p, content in files.items()]
+        tree_body: dict[str, Any] = {"tree": tree}
+        if base_tree_sha:
+            tree_body["base_tree"] = base_tree_sha
+        rt = await client.post(f"{GITHUB_API}/repos/{owner}/{repo}/git/trees", headers=headers, json=tree_body)
+        if rt.status_code not in (200, 201):
+            raise _bad(rt, "tree create")
+        new_tree_sha = rt.json().get("sha")
+
+        # 3. Nothing changed → no commit.
+        if base_tree_sha and new_tree_sha == base_tree_sha:
+            return {
+                "repo": f"{owner}/{repo}", "branch": branch, "total": len(configs),
+                "committed": False, "commit_sha": None, "message": "Already up to date", "timestamp": timestamp,
+            }
+
+        # 4. One commit.
+        commit_body: dict[str, Any] = {"message": commit_msg, "tree": new_tree_sha}
+        if base_commit_sha:
+            commit_body["parents"] = [base_commit_sha]
+        rcm = await client.post(f"{GITHUB_API}/repos/{owner}/{repo}/git/commits", headers=headers, json=commit_body)
+        if rcm.status_code not in (200, 201):
+            raise _bad(rcm, "commit create")
+        new_commit_sha = rcm.json().get("sha")
+
+        # 5. Point the branch at it (create the ref if the branch was unborn).
+        if base_commit_sha:
+            rr = await client.patch(ref_url, headers=headers, json={"sha": new_commit_sha, "force": False})
+        else:
+            rr = await client.post(
+                f"{GITHUB_API}/repos/{owner}/{repo}/git/refs",
+                headers=headers,
+                json={"ref": f"refs/heads/{branch}", "sha": new_commit_sha},
+            )
+        if rr.status_code not in (200, 201):
+            raise _bad(rr, "ref update")
 
     return {
-        "repo": f"{owner}/{repo}",
-        "branch": branch,
-        "total": len(configs),
-        **counts,
-        "details": results,
-        "timestamp": timestamp,
+        "repo": f"{owner}/{repo}", "branch": branch, "total": len(configs),
+        "committed": True, "commit_sha": new_commit_sha,
+        "message": f"Backed up {len(configs)} configs in 1 commit", "timestamp": timestamp,
     }
 
 
