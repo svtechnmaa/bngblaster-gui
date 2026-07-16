@@ -17,11 +17,12 @@ jobs:
         run: |
           for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
             PACKAGE_NAME="${IMAGE_NAME}"
-            IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
+            IMAGES=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions?per_page=100" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
             echo $IMAGES | jq -c 'select(
               ((.tags | contains(["latest"])) | not) and
               ((.tags | map(select(test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))) | length) == 0) and
+              (.tags | any(startswith("test-v"))) and
               (.updated_at | fromdateiso8601 < now - 7*24*60*60) # older than 7 days
             )' | while read -r json; do
               id=$(echo $json | jq -r '.id')
