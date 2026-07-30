@@ -153,6 +153,17 @@ const DEFAULT_CONFIG = {
 const isRunningOrUnverified = (i: { status: string; error?: string }) =>
     i.status === 'started' || i.status === 'running' || !!i.error;
 
+/**
+ * Lifecycle of the instance backing a saved config, for the Start controls:
+ * `running` — controller confirmed it; `unverified` — the status lookup failed, so it
+ * may be running and must not be started again; `idle` — confirmed not running.
+ */
+const instanceState = (i?: { status: string; error?: string }): 'running' | 'unverified' | 'idle' => {
+    if (!i) return 'idle';
+    if (i.error) return 'unverified';
+    return i.status === 'started' || i.status === 'running' ? 'running' : 'idle';
+};
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function BNGBlasterPage() {
@@ -807,6 +818,13 @@ export default function BNGBlasterPage() {
     const handleStartFromConfig = async (c: BNGConfig) => {
         if (!selServer) { showErr('Select a BNG server first'); return; }
         const instName = toInstanceName(c.name);
+        // A failed status lookup means the instance may already be running — starting it
+        // would push a new config over a live test. Guarded here as well as in the UI so
+        // no call path can issue the duplicate start.
+        if (instanceState(allInstances.find(i => i.name === instName)) === 'unverified') {
+            showErr(`Could not verify whether "${instName}" is running — refresh the instance list before starting it`);
+            return;
+        }
         setStartingConfigId(c.id); setRunError(''); setIfaceSetupLog(null);
         try {
             // Step 1: Setup VLAN subinterfaces via SSH (if server has SSH credentials)
@@ -1575,9 +1593,11 @@ export default function BNGBlasterPage() {
                                                 const visible = configs.filter(c => {
                                                     const instName = toInstanceName(c.name);
                                                     const inst = allInstances.find(i => i.name === instName);
-                                                    const isRunning = inst?.status === 'started';
-                                                    if (savedCfgFilter === 'running' && !isRunning) return false;
-                                                    if (savedCfgFilter === 'idle' && isRunning) return false;
+                                                    // Unverified counts as active, never idle — an idle list is a list of
+                                                    // things safe to start, and an unverified instance is not.
+                                                    const isActive = instanceState(inst) !== 'idle';
+                                                    if (savedCfgFilter === 'running' && !isActive) return false;
+                                                    if (savedCfgFilter === 'idle' && isActive) return false;
                                                     if (ownerFilter === 'mine' && c.is_owner === false) return false;
                                                     if (ownerFilter !== 'all' && ownerFilter !== 'mine' && c.owner_username !== ownerFilter) return false;
                                                     if (selectedTags.length && !selectedTags.some(t => (c.tags ?? []).includes(t))) return false;
@@ -1725,10 +1745,16 @@ export default function BNGBlasterPage() {
                                                                                 const iName = toInstanceName(c.name);
                                                                                 const iInst = allInstances.find(i => i.name === iName);
                                                                                 const iStarting = startingConfigId === c.id;
-                                                                                return iInst?.status === 'started' ? (
+                                                                                const iState = instanceState(iInst);
+                                                                                return iState === 'running' ? (
                                                                                     <span className="text-[10px] text-green-600 font-semibold flex items-center gap-1" title={`Instance "${iName}" is running`}>
                                                                                         <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
                                                                                         Running
+                                                                                    </span>
+                                                                                ) : iState === 'unverified' ? (
+                                                                                    <span className="text-[10px] text-amber-600 font-semibold flex items-center gap-1" title={`Status of "${iName}" could not be read — it may be running. Refresh the instance list.`}>
+                                                                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                                                                                        Unverified
                                                                                     </span>
                                                                                 ) : (
                                                                                     <button
@@ -2427,9 +2453,9 @@ export default function BNGBlasterPage() {
                                         if (c.is_owner === false) return false;
                                         const instName = toInstanceName(c.name);
                                         const inst = allInstances.find(i => i.name === instName);
-                                        const isRunning = inst?.status === 'started';
-                                        if (cfgRunFilter === 'running' && !isRunning) return false;
-                                        if (cfgRunFilter === 'idle' && isRunning) return false;
+                                        const isActive = instanceState(inst) !== 'idle';
+                                        if (cfgRunFilter === 'running' && !isActive) return false;
+                                        if (cfgRunFilter === 'idle' && isActive) return false;
                                         const q = cfgRunSearch.toLowerCase().trim();
                                         if (q && !c.name.toLowerCase().includes(q) && !(c.description ?? '').toLowerCase().includes(q)) return false;
                                         return true;
@@ -2488,10 +2514,18 @@ export default function BNGBlasterPage() {
                                                                     Edit
                                                                 </button>
                                                             )}
-                                                            {existingInst?.status === 'started' ? (
+                                                            {instanceState(existingInst) === 'running' ? (
                                                                 <span className="text-[11px] text-green-600 font-semibold flex items-center gap-1 px-2.5 py-1">
                                                                     <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
                                                                     Running
+                                                                </span>
+                                                            ) : instanceState(existingInst) === 'unverified' ? (
+                                                                <span
+                                                                    className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 px-2.5 py-1"
+                                                                    title={`Status of "${instName}" could not be read — it may be running. Refresh the instance list before starting it.`}
+                                                                >
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block" />
+                                                                    Unverified
                                                                 </span>
                                                             ) : (
                                                                 <button
