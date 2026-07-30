@@ -19,6 +19,11 @@ router = APIRouter(prefix="/bngblaster", tags=["BNGBlaster"])
 
 _SCHEMA_PATH = pathlib.Path(__file__).parent.parent.parent / "data" / "all_conf.yml"
 
+# Max simultaneous status lookups against one controller. Kept well below httpx's
+# default pool of 100 — the controller serialises on its own state lock, so a wide
+# burst only adds pool-wait latency and turns into spurious "unknown" statuses.
+_STATUS_FANOUT = 12
+
 
 # ── Schema endpoint ───────────────────────────────────────────────────────────
 
@@ -613,16 +618,22 @@ async def list_instances_with_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return [{name, status}] for all instances in a single round-trip to the frontend.
+    """Return [{name, status, error?}] for all instances in a single round-trip.
 
-    Fetches the instance list then queries every status in parallel using one shared
-    httpx.AsyncClient so backend→BNGBlaster connections are reused.
+    Fetches the instance list then queries every status with a bounded number of
+    concurrent connections. Unbounded fan-out starves httpx's connection pool once a
+    server hosts a few hundred instances: the queued lookups burn their timeout
+    *waiting for a connection*, come back "unknown", and running instances silently
+    vanish from the UI. `error` is set when a lookup failed, so "unknown" caused by a
+    transport problem is distinguishable from a genuinely stopped instance.
     """
     server = _require_server(server_id, db)
     base_url = _bng_url(server)
 
     # Step 1: get list of instance names
     _, data = await _proxy("GET", base_url, "/api/v1/instances")
+    if isinstance(data, dict):
+        data = data.get("instances") or data.get("running-instances") or []
     if isinstance(data, list):
         names: list[str] = [i["name"] if isinstance(i, dict) else str(i) for i in data]
     else:
@@ -631,17 +642,29 @@ async def list_instances_with_status(
     if not names:
         return []
 
-    # Step 2: fetch all statuses in parallel with a shared client (connection reuse)
-    async def _fetch_status(client: httpx.AsyncClient, name: str) -> dict:
-        try:
-            r = await client.get(f"{base_url}/api/v1/instances/{name}", timeout=5.0)
-            status = r.json().get("status", "unknown") if r.status_code == 200 else "unknown"
-        except Exception:
-            status = "unknown"
-        return {"name": name, "status": status}
+    # Step 2: fetch statuses with bounded concurrency, retrying transport failures once
+    async def _fetch_status(client: httpx.AsyncClient, sem: asyncio.Semaphore, name: str) -> dict:
+        last_error = "unreachable"
+        async with sem:
+            for _attempt in range(2):
+                try:
+                    r = await client.get(f"{base_url}/api/v1/instances/{name}")
+                    if r.status_code == 200:
+                        return {"name": name, "status": r.json().get("status", "unknown")}
+                    last_error = f"HTTP {r.status_code}"
+                    if r.status_code < 500:
+                        break  # 4xx will not change on retry
+                except Exception as exc:
+                    last_error = type(exc).__name__
+        return {"name": name, "status": "unknown", "error": last_error}
 
-    async with httpx.AsyncClient() as client:
-        results = await asyncio.gather(*[_fetch_status(client, n) for n in names])
+    limits = httpx.Limits(
+        max_connections=_STATUS_FANOUT,
+        max_keepalive_connections=_STATUS_FANOUT,
+    )
+    async with httpx.AsyncClient(limits=limits, timeout=httpx.Timeout(10.0, connect=5.0)) as client:
+        sem = asyncio.Semaphore(_STATUS_FANOUT)
+        results = await asyncio.gather(*[_fetch_status(client, sem, n) for n in names])
 
     return list(results)
 
