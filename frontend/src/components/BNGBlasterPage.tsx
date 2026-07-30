@@ -147,6 +147,12 @@ const DEFAULT_CONFIG = {
     traffic: { "stream-rate-calculation": true, "stream-delay-calculation": true },
 };
 
+// Predicate for the "Running" filter. An instance whose status lookup failed (`error`)
+// is kept visible: the controller never said it was stopped, so hiding it would make a
+// running test disappear from the list.
+const isRunningOrUnverified = (i: { status: string; error?: string }) =>
+    i.status === 'started' || i.status === 'running' || !!i.error;
+
 // ── Main component ───────────────────────────────────────────────────────────
 
 export default function BNGBlasterPage() {
@@ -211,7 +217,9 @@ export default function BNGBlasterPage() {
 
     // ── Run state ────────────────────────────────────────────────────────
     const [selServer, setSelServer] = useState<BNGServer | null>(null);
-    const [allInstances, setAllInstances] = useState<{ name: string; status: string }[]>([]);
+    // `error` is set when the status lookup itself failed — such an instance may well be
+    // running, so it must not be silently dropped by the "Running" filter.
+    const [allInstances, setAllInstances] = useState<{ name: string; status: string; error?: string }[]>([]);
     const [runMsg, setRunMsg] = useState('');
     const [runError, setRunError] = useState('');
     const [loadingInstances, setLoadingInstances] = useState(false);
@@ -1053,6 +1061,8 @@ export default function BNGBlasterPage() {
                 : 'bg-amber-100 text-amber-700';
         return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${cls}`}>{status}</span>;
     };
+
+    const instLookupFailed = allInstances.filter(i => !!i.error).length;
 
     const allCfgTags = Array.from(new Set(configs.flatMap(c => c.tags ?? []))).sort((a, b) => a.localeCompare(b));
     const allOwners = Array.from(new Set(configs.map(c => c.owner_username).filter(Boolean) as string[])).sort();
@@ -1936,6 +1946,14 @@ export default function BNGBlasterPage() {
                                         <span className="text-[10px] bg-[var(--bg-primary)] text-[var(--text-muted)] px-2 py-0.5 rounded-full font-bold">
                                             {allInstances.length} total · {allInstances.filter(i => i.status === 'started').length} running
                                         </span>
+                                        {instLookupFailed > 0 && (
+                                            <span
+                                                className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold"
+                                                title={`Status lookup failed for ${instLookupFailed} instance(s) — they may still be running. Refresh to retry.`}
+                                            >
+                                                {instLookupFailed} unverified
+                                            </span>
+                                        )}
                                         {/* Filter toggle */}
                                         <div className="flex rounded-lg border border-[var(--border-color)] overflow-hidden text-[11px] font-semibold">
                                             {(['running', 'all'] as const).map(f => (
@@ -1976,7 +1994,7 @@ export default function BNGBlasterPage() {
                                     <p className="text-sm text-[var(--text-muted)] text-center py-8">No instances found on this server.</p>
                                 ) : (() => {
                                     const filtered = allInstances
-                                        .filter(i => instFilter === 'all' || i.status === 'started')
+                                        .filter(i => instFilter === 'all' || isRunningOrUnverified(i))
                                         .filter(i => !instSearch.trim() || i.name.toLowerCase().includes(instSearch.toLowerCase()));
                                     return filtered.length === 0 ? (
                                         <div className="flex flex-col items-center gap-2 text-center py-8">
@@ -2553,7 +2571,7 @@ export default function BNGBlasterPage() {
                                 ) : loadingInstances ? (
                                     <p className="text-sm text-[var(--text-muted)] text-center py-6"><span className="flex items-center justify-center gap-1.5"><ArrowPathIcon className="w-4 h-4 animate-spin" />Loading…</span></p>
                                 ) : (() => {
-                                    const rptFiltered = allInstances.filter(i => instFilter === 'all' || i.status === 'started');
+                                    const rptFiltered = allInstances.filter(i => instFilter === 'all' || isRunningOrUnverified(i));
                                     return rptFiltered.length === 0 ? (
                                         <div className="flex flex-col items-center gap-2 text-center py-6">
                                             <ChartBarIcon className="w-8 h-8 text-[var(--text-muted)] opacity-40" />
