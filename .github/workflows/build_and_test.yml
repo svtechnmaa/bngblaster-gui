@@ -475,11 +475,17 @@ jobs:
         token: ${{ secrets.GH_TOKEN }}
         path: SVTECH_CICD_Utilities
 
+    - name: Setup Python
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.13"
+
     - name: Install Python dependencies
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
         cd ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/
-        pip install -r requirements.txt
+        python3 -m pip install -r requirements.txt
 
     - name: Import GPG key
       if: steps.semantic.outputs.new_release_published == 'true'
