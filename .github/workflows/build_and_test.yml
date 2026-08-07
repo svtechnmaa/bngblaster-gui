@@ -49,8 +49,8 @@ jobs:
         COMMIT_SHORT_ID=$(git rev-parse --short ${{ env.COMMIT_FULL_ID }})
         echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}" >>${GITHUB_ENV}
         echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
-        echo "COMMIT_SHORT_ID=${{ env.COMMIT_SHORT_ID }}"
-        echo "REPO=${{ env.REPO }}"
+        echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}"
+        echo "REPO=${GITHUB_REPOSITORY,,}"
 
     ## Check commit message for no-ci, no-scan, no-cache
     - name: Check commit message
@@ -90,10 +90,10 @@ jobs:
 
           IMAGES=$(echo "$RESPONSE" | jq -r ' .[] | {tags: .metadata.container.tags, updated_at: .updated_at, id: .id} ')
 
-          EXISTED_IMAGE=$(echo $IMAGES | jq -c 'select(.tags | contains(["${{ env.COMMIT_SHORT_ID }}"]))')
+          EXISTED_IMAGE=$(echo $IMAGES | jq --arg tag "$COMMIT_SHORT_ID" -c 'select(.tags | contains([$tag]))')
 
           if [[ -z $EXISTED_IMAGE ]]; then
-            echo "Image $IMAGE_NAME with tag ${{ env.COMMIT_SHORT_ID }} is not in GHCR yet."
+            echo "Image $IMAGE_NAME with tag $COMMIT_SHORT_ID is not in GHCR yet."
             IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
           else
             FULL_TAGS=$(echo $EXISTED_IMAGE | jq -c '.tags')
@@ -103,7 +103,7 @@ jobs:
               echo "$IMAGE_NAME is not latest or release image"
             fi
 
-            echo "Image $IMAGE_NAME with tag ${{ env.COMMIT_SHORT_ID }} exists. The full tags are $FULL_TAGS."
+            echo "Image $IMAGE_NAME with tag $COMMIT_SHORT_ID exists. The full tags are $FULL_TAGS."
           fi
         done
 
@@ -234,9 +234,9 @@ jobs:
       run: |
         BACKEND_IMAGE_NAME="bngblaster-gui-backend"
         docker tag backend:latest ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag backend:latest ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker tag backend:latest ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
         docker push ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker push ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
     - name: Tag and push Frontend image to GitHub Container Registry
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
@@ -245,9 +245,9 @@ jobs:
       run: |
         FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
         docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
         docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
-        docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
 
   # test:
   #   if: |
@@ -393,8 +393,8 @@ jobs:
           COMMIT_SHORT_ID=$(git rev-parse --short ${{ env.COMMIT_FULL_ID }})
           echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}" >>${GITHUB_ENV}
           echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
-          echo "COMMIT_SHORT_ID=${{ env.COMMIT_SHORT_ID }}"
-          echo "REPO=${{ env.REPO }}"
+          echo "COMMIT_SHORT_ID=${COMMIT_SHORT_ID}"
+          echo "REPO=${GITHUB_REPOSITORY,,}"
 
     - name: Login to GitHub Container Registry
       if: steps.semantic.outputs.new_release_published == 'true'
@@ -409,22 +409,22 @@ jobs:
       run: |
         BACKEND_IMAGE_NAME="bngblaster-gui-backend"
         FRONTEND_IMAGE_NAME="bngblaster-gui-frontend"
-        docker pull ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-        docker pull ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
+        docker pull ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
+        docker pull ghcr.io/svtechnmaa/${BACKEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
 
     - name: Delete package from GHCR after successful release
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
         if [[ "${{ needs.build.outputs.is_latest_or_release_image }}" == "true" ]]; then
-          echo "Image with tag ${{ env.COMMIT_SHORT_ID }} must NOT be deleted as it is release or latest image."
+          echo "Image with tag $COMMIT_SHORT_ID must NOT be deleted as it is release or latest image."
         else
-          echo "New release ${{ env.RELEASE_IMAGE_TAG }} was published, deleting images with tag ${{ env.COMMIT_SHORT_ID }} from GHCR..."
+          echo "New release $RELEASE_IMAGE_TAG was published, deleting images with tag $COMMIT_SHORT_ID from GHCR..."
           for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
             echo "Processing $IMAGE_NAME..."
             PACKAGE_NAME="${IMAGE_NAME}"
             VERSION_ID=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions" \
-              | jq -r '.[] | select(.metadata.container.tags[] == "${{ env.COMMIT_SHORT_ID }}") | .id')
+              | jq --arg tag "$COMMIT_SHORT_ID" -r '.[] | select(.metadata.container.tags[] == $tag) | .id')
             echo "Package version ID for $IMAGE_NAME: $VERSION_ID"
             curl -i -X DELETE \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -439,120 +439,120 @@ jobs:
       run: |
         for IMAGE_NAME in bngblaster-gui-backend bngblaster-gui-frontend; do
           echo "Tagging and pushing $IMAGE_NAME..."
-          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
-          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }} ghcr.io/svtechnmaa/${IMAGE_NAME}:latest
+          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${COMMIT_SHORT_ID} ghcr.io/svtechnmaa/${IMAGE_NAME}:${RELEASE_IMAGE_TAG}
+          docker tag ghcr.io/svtechnmaa/${IMAGE_NAME}:${COMMIT_SHORT_ID} ghcr.io/svtechnmaa/${IMAGE_NAME}:latest
 
-          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.COMMIT_SHORT_ID }}
-          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${{ env.RELEASE_IMAGE_TAG }}
+          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${COMMIT_SHORT_ID}
+          docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:${RELEASE_IMAGE_TAG}
           docker push ghcr.io/svtechnmaa/${IMAGE_NAME}:latest
         done
       env:
         RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
-
-  #   - name: Install Helm
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: azure/setup-helm@v3
-  #     with:
-  #       version: 'latest'
-
-  #   - name: Setup Python
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: actions/setup-python@v5.3.0
-  #     with:
-  #       python-version: "3.13"
     
-  #   - name: Clone charts Repository
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: actions/checkout@v4
-  #     with:
-  #       repository: '${{ github.repository_owner }}/charts'
-  #       ref: 'main'
-  #       token: ${{ secrets.PUSH_TOKEN }}
-  #       path: charts
+    - name: Clone charts Repository
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: '${{ github.repository_owner }}/charts'
+        ref: 'main'
+        token: ${{ secrets.PUSH_TOKEN }}
+        path: charts
 
-  #   - name: Clone stack_charts Repository
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: actions/checkout@v4
-  #     with:
-  #       repository: '${{ github.repository_owner }}/stacked_charts'
-  #       ref: 'master'
-  #       token: '${{ secrets.PUSH_TOKEN }}'
-  #       path: stacked_charts
+    - name: Clone stack_charts Repository
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: actions/checkout@v4
+      with:
+        repository: '${{ github.repository_owner }}/stacked_charts'
+        ref: 'master'
+        token: '${{ secrets.PUSH_TOKEN }}'
+        path: stacked_charts
 
-  #   - name: Clone SVTECH_CI_utilities Repository
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: actions/checkout@v4
-  #     with:
-  #       repository: '${{ github.repository_owner }}/SVTECH_CI_utilities'
-  #       ref: 'dev-jenkins'
-  #       token: '${{ secrets.PUSH_TOKEN }}'
-  #       path: SVTECH_CI_utilities
+    - name: Clone SVTECH_CICD_Utilities Repository
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: actions/checkout@v5
+      with:
+        repository: '${{ github.repository_owner }}/SVTECH_CICD_Utilities'
+        token: ${{ secrets.GH_TOKEN }}
+        path: SVTECH_CICD_Utilities
 
-  #   - name: Import GPG key
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     uses: crazy-max/ghaction-import-gpg@v6.2.0
-  #     with:
-  #       gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-  #       # git_user_signingkey: true
-  #       # git_commit_gpgsign: true
-    
-  #   - name: Modify image version in charts
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     run: |
-  #       sed -i '/^  repository: svtechnmaa\/bngblaster_web_client/{N;s/  tag: .*/  tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/}' charts/kubernetes/bngblaster/values.yaml
-  #     env:
-  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+    - name: Install Python dependencies
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        cd ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/
+        pip install -r requirements.txt
 
-  #   - name: Modify image version in stack_charts
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     run: |
-  #       pip install requests pyyaml
-  #       python3 SVTECH_CI_utilities/auto_testing/python_script/public_helmchart_release.py --BUILD_VARS_PATH='.' --ID='.' --GITHUB_TOKEN=${{secrets.PUSH_TOKEN}} --OWNER=${{ github.repository_owner}} --charts_string=bngblaster --REPO=charts
+    - name: Import GPG key
+      if: steps.semantic.outputs.new_release_published == 'true'
+      uses: crazy-max/ghaction-import-gpg@v6.2.0
+      with:
+        gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
-  #   - name: Update image version in charts
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     env:
-  #       GIT_USER_NAME: "svtechnmaa"
-  #       GIT_USER_EMAIL: "nmaa@svtech.com.vn"
-  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
-  #     run: |
-  #       cd charts
-  #       helm repo index artifacthub
+    - name: Modify image version in charts
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        sed -i '/repository: svtechnmaa\/bngblaster-gui-backend/!b;n;s/tag:.*/tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/' charts/kubernetes/bngblaster-gui/values.yaml
+        sed -i '/repository: svtechnmaa\/bngblaster-gui-frontend/!b;n;s/tag:.*/tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/' charts/kubernetes/bngblaster-gui/values.yaml
+      env:
+        RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
 
-  #       if [[ `git diff --name-only` ]]; then  
-  #         git config user.name "${{ env.GIT_USER_NAME }}"
-  #         git config user.email "${{ env.GIT_USER_EMAIL }}"
-  #         git config commit.gpgSign true
-  #         git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+    - name: Update preparation chart version base on semantic release version in stacked_charts and charts repo
+      if: steps.semantic.outputs.new_release_published == 'true'
+      run: |
+        python3 ${{ github.workspace }}/SVTECH_CICD_Utilities/python_script/public_helmchart_release.py \
+          --BUILD_VARS_PATH=${{ github.workspace }} \
+          --GITHUB_TOKEN=${{ secrets.GH_TOKEN}} \
+          --OWNER=${{ github.repository_owner }} \
+          --charts_string=bngblaster-gui \
+          --TARGET_REPO=charts \
+          --SOURCE_REPO=${{ github.event.repository.name }} \
+          --COMMIT_SHA=${{ env.COMMIT_FULL_ID }}
 
-  #         git add .
-  #         git commit --no-verify -m "no-ci: Update BNGBlaster image version to ${{ env.RELEASE_IMAGE_TAG }}"
-  #         # git remote set-url origin https://svtechnmaa:${{secrets.PUSH_TOKEN}}@github.com/svtechnmaa/charts.git
-  #         git push origin main
-  #       else 
-  #         echo "No changes to commit" 
-  #       fi
-    
-  #   - name: Update image version in stack_charts
-  #     if: steps.semantic.outputs.new_release_published == 'true'
-  #     env:
-  #       GIT_USER_NAME: "svtechnmaa"
-  #       GIT_USER_EMAIL: "nmaa@svtech.com.vn"
-  #       RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+        RELEASE_MSG=$(cat /tmp/release_info.txt)
+        echo "RELEASE_MSG=$RELEASE_MSG" >> $GITHUB_ENV
 
-  #     run: |
-  #       cd stacked_charts
-  #       if [[ `git diff --name-only` ]]; then 
+    - name: Update image version in charts
+      if: steps.semantic.outputs.new_release_published == 'true'
+      env:
+        GIT_USER_NAME: "svtechnmaa"
+        GIT_USER_EMAIL: "nmaa@svtech.com.vn"
+        RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+        RELEASE_MSG: ${{ env.RELEASE_MSG }}
+      run: |
+        cd charts
+        helm repo index artifacthub
 
-  #         git config user.name "${{ env.GIT_USER_NAME }}"
-  #         git config user.email "${{ env.GIT_USER_EMAIL }}"
-  #         git config commit.gpgSign true
-  #         git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+        if [[ `git diff --name-only` ]]; then  
+          git config user.name "${{ env.GIT_USER_NAME }}"
+          git config user.email "${{ env.GIT_USER_EMAIL }}"
+          git config commit.gpgSign true
+          git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+          git add .
+          git commit --no-verify -m "no-ci: Update bngblaster-gui image version to ${{ env.RELEASE_IMAGE_TAG }} and release charts ${{ env.RELEASE_MSG }}"
+          # git remote set-url origin https://svtechnmaa:${{secrets.GH_TOKEN}}@github.com/svtechnmaa/charts.git
+          git push origin main
+        else 
+          echo "No changes to commit" 
+        fi
 
-  #         git add .
-  #         git commit -S -m "no-ci: Update BNGBlaster image version to ${{ env.RELEASE_IMAGE_TAG }}"
-  #         # git remote set-url origin https://svtechnmaa:${{secrets.PUSH_TOKEN}}@github.com/svtechnmaa/stacked_charts.git
-  #         git push origin master
-  #       else
-  #         echo "No changes to commit"
-  #       fi
+    - name: Update image version in stack_charts
+      if: steps.semantic.outputs.new_release_published == 'true'
+      env:
+        GIT_USER_NAME: "svtechnmaa"
+        GIT_USER_EMAIL: "nmaa@svtech.com.vn"
+        RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
+
+      run: |
+        cd stacked_charts
+        if [[ `git diff --name-only` ]]; then 
+
+          git config user.name "${{ env.GIT_USER_NAME }}"
+          git config user.email "${{ env.GIT_USER_EMAIL }}"
+          git config commit.gpgSign true
+          git config user.signingkey ${{ secrets.GPG_KEY_ID }}
+          git add .
+          git commit -S -m "no-ci: Update bngblaster-gui chart version ${{ env.RELEASE_IMAGE_TAG }}" 
+          # git remote set-url origin https://svtechnmaa:${{secrets.GH_TOKEN}}@github.com/svtechnmaa/stacked_charts.git
+          git push origin master  
+        else 
+          echo "No changes to commit" 
+        fi
