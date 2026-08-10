@@ -82,7 +82,7 @@ jobs:
           PACKAGE_NAME="${IMAGE_NAME}"
           RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
 
-          if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
+          if echo "$RESPONSE" | jq -e 'type == "object" and has("message") and (.status | tostring) == "404"' >/dev/null; then
             echo "Package '$IMAGE_NAME' not found"
             IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
             continue
@@ -177,7 +177,12 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        docker compose -f docker-compose.yml up -d --build
+        if ! docker compose -f docker-compose.yml up -d --build; then
+          echo "::error::Docker Compose failed to start the services"
+          docker compose -f docker-compose.yml ps --all || true
+          docker compose -f docker-compose.yml logs --no-color --tail=200 postgres || true
+          exit 1
+        fi
     - name: Wait for services to be healthy
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
