@@ -82,7 +82,7 @@ jobs:
           PACKAGE_NAME="${IMAGE_NAME}"
           RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "https://api.github.com/orgs/${{ github.repository_owner }}/packages/container/$PACKAGE_NAME/versions")
 
-          if echo "$RESPONSE" | jq -e 'has("message") and .status == "404"' >/dev/null; then
+          if echo "$RESPONSE" | jq -e 'type == "object" and has("message") and (.status | tostring) == "404"' >/dev/null; then
             echo "Package '$IMAGE_NAME' not found"
             IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED=false
             continue
@@ -155,7 +155,7 @@ jobs:
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') &&
         (steps.check_commit_message.outputs.no_ci != 'true')
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: docker.io
         username: '${{ secrets.DOCKER_HUB_USERNAME }}'
@@ -166,7 +166,7 @@ jobs:
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: '${{ github.repository_owner }}'
@@ -177,7 +177,12 @@ jobs:
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
         steps.check_commit_message.outputs.no_ci != 'true'
       run: |
-        docker compose -f docker-compose.yml up -d --build
+        if ! docker compose -f docker-compose.yml up -d --build; then
+          echo "::error::Docker Compose failed to start the services"
+          docker compose -f docker-compose.yml ps --all || true
+          docker compose -f docker-compose.yml logs --no-color --tail=200 postgres || true
+          exit 1
+        fi
     - name: Wait for services to be healthy
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
@@ -275,7 +280,7 @@ jobs:
   #       echo "REPO=${{ env.REPO }}"
 
   #   - name: Login to GitHub Container Registry
-  #     uses: docker/login-action@v3
+  #     uses: docker/login-action@v4
   #     with:
   #       registry: ghcr.io
   #       username: '${{ github.repository_owner }}'
@@ -379,7 +384,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v5
     - name: Semantic Release
-      uses: cycjimmy/semantic-release-action@v4
+      uses: cycjimmy/semantic-release-action@v6
       id: semantic
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # If permission denied for protected branch, use ${{ secrets.PUSH_TOKEN }} instead.
@@ -398,7 +403,7 @@ jobs:
 
     - name: Login to GitHub Container Registry
       if: steps.semantic.outputs.new_release_published == 'true'
-      uses: docker/login-action@v3
+      uses: docker/login-action@v4
       with:
         registry: ghcr.io
         username: '${{ github.repository_owner }}'
@@ -451,7 +456,7 @@ jobs:
     
     - name: Clone charts Repository
       if: steps.semantic.outputs.new_release_published == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: '${{ github.repository_owner }}/charts'
         ref: 'main'
@@ -460,7 +465,7 @@ jobs:
 
     - name: Clone stack_charts Repository
       if: steps.semantic.outputs.new_release_published == 'true'
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
       with:
         repository: '${{ github.repository_owner }}/stacked_charts'
         ref: 'master'
@@ -489,15 +494,15 @@ jobs:
 
     - name: Import GPG key
       if: steps.semantic.outputs.new_release_published == 'true'
-      uses: crazy-max/ghaction-import-gpg@v6.2.0
+      uses: crazy-max/ghaction-import-gpg@v7
       with:
         gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
 
     - name: Modify image version in charts
       if: steps.semantic.outputs.new_release_published == 'true'
       run: |
-        sed -i '/repository: svtechnmaa\/bngblaster-gui-backend/!b;n;s/tag:.*/tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/' charts/kubernetes/bngblaster-gui/values.yaml
-        sed -i '/repository: svtechnmaa\/bngblaster-gui-frontend/!b;n;s/tag:.*/tag: '"${{ env.RELEASE_IMAGE_TAG }}"'/' charts/kubernetes/bngblaster-gui/values.yaml
+        sed -i '/^[[:space:]]*repository:.*bngblaster-gui-backend/{N;s/\n[[:space:]]*tag:.*/\n    tag: "'"${RELEASE_IMAGE_TAG}"'"/;}' charts/kubernetes/bngblaster-gui/values.yaml
+        sed -i '/^[[:space:]]*repository:.*bngblaster-gui-frontend/{N;s/\n[[:space:]]*tag:.*/\n    tag: "'"${RELEASE_IMAGE_TAG}"'"/;}' charts/kubernetes/bngblaster-gui/values.yaml
       env:
         RELEASE_IMAGE_TAG: v${{ steps.semantic.outputs.new_release_version }}
 
