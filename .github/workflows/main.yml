@@ -541,8 +541,8 @@ jobs:
           git commit --no-verify -m "no-ci: Update bngblaster-gui image version to ${{ env.RELEASE_IMAGE_TAG }} and release charts ${{ env.RELEASE_MSG }}"
           # git remote set-url origin https://svtechnmaa:${{secrets.GH_TOKEN}}@github.com/svtechnmaa/charts.git
           git push origin main
-        else 
-          echo "No changes to commit" 
+        else
+          echo "No changes to commit"
         fi
 
     - name: Update image version in stack_charts
@@ -564,6 +564,19 @@ jobs:
           git commit -S -m "no-ci: Update bngblaster-gui chart version ${{ env.RELEASE_IMAGE_TAG }}" 
           # git remote set-url origin https://svtechnmaa:${{secrets.GH_TOKEN}}@github.com/svtechnmaa/stacked_charts.git
           git push origin master  
-        else 
-          echo "No changes to commit" 
+        else
+          echo "No changes to commit"
         fi
+
+  check_job_results:
+    name: Check job results
+    if: always()
+    needs:
+      - build
+      - release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        uses: svtechnmaa/.github/actions/check_job_results@main
+        with:
+          jobs: ${{ toJSON(needs) }}
