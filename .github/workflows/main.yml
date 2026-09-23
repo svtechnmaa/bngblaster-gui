@@ -574,7 +574,7 @@ jobs:
     needs:
       - build
       - release
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-dind
     steps:
       - name: Check job results
         uses: svtechnmaa/.github/actions/check_job_results@main
