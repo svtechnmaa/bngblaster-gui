@@ -283,7 +283,9 @@ async def backup_configs_to_git(
         # 1. Resolve the branch head (base commit + tree). 404/409 = unborn branch.
         base_commit_sha: str | None = None
         base_tree_sha: str | None = None
+        # GET is /git/ref/<ref> (singular); PATCH is /git/refs/<ref> (plural). Not a typo.
         ref_url = f"{GITHUB_API}/repos/{owner}/{repo}/git/ref/heads/{branch}"
+        ref_update_url = f"{GITHUB_API}/repos/{owner}/{repo}/git/refs/heads/{branch}"
         r = await client.get(ref_url, headers=headers)
         if r.status_code == 200:
             base_commit_sha = r.json().get("object", {}).get("sha")
@@ -322,7 +324,7 @@ async def backup_configs_to_git(
 
         # 5. Point the branch at it (create the ref if the branch was unborn).
         if base_commit_sha:
-            rr = await client.patch(ref_url, headers=headers, json={"sha": new_commit_sha, "force": False})
+            rr = await client.patch(ref_update_url, headers=headers, json={"sha": new_commit_sha, "force": False})
         else:
             rr = await client.post(
                 f"{GITHUB_API}/repos/{owner}/{repo}/git/refs",
