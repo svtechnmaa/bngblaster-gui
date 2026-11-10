@@ -200,7 +200,7 @@ jobs:
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        ignore_finding: 'true'
+        ignore_finding: 'false'
         report_mode: collect
 
     - name: Scan frontend Dockerfile using Trivy
@@ -216,7 +216,7 @@ jobs:
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        ignore_finding: 'true'
+        ignore_finding: 'false'
         report_mode: collect
 
     - name: Scan backend image using Trivy
@@ -233,7 +233,7 @@ jobs:
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        ignore_finding: 'true'
+        ignore_finding: 'false'
         report_mode: collect
 
     - name: Scan frontend image using Trivy
@@ -250,7 +250,7 @@ jobs:
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        ignore_finding: 'true'
+        ignore_finding: 'false'
         report_mode: collect
 
     - name: Report all Trivy scans
