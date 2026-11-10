@@ -201,7 +201,7 @@ jobs:
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        report_mode: collect
+        merge_report: 'true'
 
     - name: Scan frontend Dockerfile using Trivy
       id: scan_frontend_dockerfile
@@ -217,7 +217,7 @@ jobs:
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        report_mode: collect
+        merge_report: 'true'
 
     - name: Scan backend image using Trivy
       id: scan_backend_image
@@ -234,7 +234,7 @@ jobs:
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        report_mode: collect
+        merge_report: 'true'
 
     - name: Scan frontend image using Trivy
       id: scan_frontend_image
@@ -251,7 +251,7 @@ jobs:
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        report_mode: collect
+        merge_report: 'true'
 
     - name: Report all Trivy scans
       id: trivy_report
@@ -262,7 +262,7 @@ jobs:
         mail_password: ${{ secrets.MAIL_PASSWORD }}
         mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         it_team_email: ${{ vars.IT_TEAM_EMAIL }}
-        mail_mode: deferred
+        mail_after_job: 'true'
 
     - name: Wait for services to be healthy
       if: |
