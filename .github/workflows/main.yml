@@ -39,6 +39,7 @@ jobs:
       is_latest_or_release_image: ${{ steps.check_existing_image.outputs.is_latest_or_release_image }}
       trivy_send_mail: ${{ steps.trivy_report.outputs.send_mail }}
       trivy_mail_artifact: ${{ steps.trivy_report.outputs.artifact_name }}
+      trivy_commit_author_email: ${{ steps.get_commit_info.outputs.committer_email }}
     steps:
       
     - name: Checkout code
@@ -113,17 +114,8 @@ jobs:
         echo "is_latest_or_release_image=$IS_LATEST_OR_RELEASE_IMAGE"
         echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED" >> $GITHUB_OUTPUT
         echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED"
-    - name: Get Job ID
-      if: steps.check_commit_message.outputs.no_ci != 'true'
-      id: get_job_id
-      run: |
-        job_id=$(curl -s -H "Authorization: Bearer ${{ secrets.PUSH_TOKEN }}" \
-        "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
-        | jq --arg job "${{ github.job }}" '.jobs[] | select(.name==$job) | .id')
-
-        echo "job_id=$job_id" >> $GITHUB_OUTPUT
-
     - name: Get Commit ID and Committer Info
+      id: get_commit_info
       run: |
         COMMIT_ID=${{ env.COMMIT_FULL_ID }}
 
@@ -149,6 +141,7 @@ jobs:
         echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
         echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
         echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+        echo "committer_email=${COMMITTER_EMAIL}" >> $GITHUB_OUTPUT
         echo "COMMIT_ID: $COMMIT_ID"
         echo "COMMITTER_NAME: $COMMITTER_NAME"
         echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
@@ -196,12 +189,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id || github.run_id }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        merge_report: 'true'
 
     - name: Scan frontend Dockerfile using Trivy
       id: scan_frontend_dockerfile
@@ -212,12 +200,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id || github.run_id }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        merge_report: 'true'
 
     - name: Scan backend image using Trivy
       id: scan_backend_image
@@ -229,12 +212,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id || github.run_id }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        merge_report: 'true'
 
     - name: Scan frontend image using Trivy
       id: scan_frontend_image
@@ -246,23 +224,12 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        job_id: ${{ steps.get_job_id.outputs.job_id || github.run_id }}
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         ignore_finding: 'false'
-        merge_report: 'true'
 
     - name: Report all Trivy scans
       id: trivy_report
       if: always() && steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && (steps.scan_backend_dockerfile.outcome != 'skipped' || steps.scan_frontend_dockerfile.outcome != 'skipped' || steps.scan_backend_image.outcome != 'skipped' || steps.scan_frontend_image.outcome != 'skipped')
       uses: svtechnmaa/.github/actions/trivy-report@fix/consolidated-trivy-report
-      with:
-        mail_username: ${{ vars.MAIL_USERNAME }}
-        mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ env.COMMITTER_EMAIL }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
-        it_team_email: ${{ vars.IT_TEAM_EMAIL }}
-        mail_after_job: 'true'
 
     - name: Wait for services to be healthy
       if: |
@@ -349,6 +316,8 @@ jobs:
         artifact_name: ${{ needs.build.outputs.trivy_mail_artifact }}
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
+        mail_receivers: ${{ needs.build.outputs.trivy_commit_author_email }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+        it_team_email: ${{ vars.IT_TEAM_EMAIL }}
 
   # test:
   #   if: |
