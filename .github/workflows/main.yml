@@ -183,7 +183,7 @@ jobs:
     - name: Scan backend Dockerfile using Trivy
       id: scan_backend_dockerfile
       if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@fix/consolidated-trivy-report
+      uses: svtechnmaa/.github/actions/trivy-dockerfile-scan@fix/consolidated-trivy-report
       with:
         dockerfile_path: ./backend/Dockerfile
         trivy_server: ${{ secrets.TRIVY_SERVER }}
@@ -194,7 +194,7 @@ jobs:
     - name: Scan frontend Dockerfile using Trivy
       id: scan_frontend_dockerfile
       if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_dockerfile@fix/consolidated-trivy-report
+      uses: svtechnmaa/.github/actions/trivy-dockerfile-scan@fix/consolidated-trivy-report
       with:
         dockerfile_path: ./frontend/Dockerfile
         trivy_server: ${{ secrets.TRIVY_SERVER }}
@@ -205,7 +205,7 @@ jobs:
     - name: Scan backend image using Trivy
       id: scan_backend_image
       if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && steps.build_services.outcome == 'success'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_image@fix/consolidated-trivy-report
+      uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
       with:
         image_name: backend
         image_tag: latest
@@ -217,7 +217,7 @@ jobs:
     - name: Scan frontend image using Trivy
       id: scan_frontend_image
       if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && steps.build_services.outcome == 'success'
-      uses: svtechnmaa/.github/actions/run_trivy_scan_image@fix/consolidated-trivy-report
+      uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
       with:
         image_name: frontend
         image_tag: latest
