@@ -23,7 +23,7 @@ on:
 
 env:
   IMAGE_TEST_TAG: ${{ format('test-v{0}', github.run_number) }}
-  COMMIT_FULL_ID: ${{ inputs.commit_id || github.sha }}
+  COMMIT_FULL_ID: ${{ inputs.commit_id || github.event.pull_request.head.sha || github.event.after || github.sha }}
 
 jobs:
   build:
