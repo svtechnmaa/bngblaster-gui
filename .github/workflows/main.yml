@@ -180,6 +180,12 @@ jobs:
           exit 1
         fi
 
+    - name: Tag local images with commit SHA for Trivy
+      if: steps.build_services.outcome == 'success'
+      run: |
+        docker tag backend:latest "backend:${COMMIT_SHORT_ID}"
+        docker tag frontend:latest "frontend:${COMMIT_SHORT_ID}"
+
     - name: Scan backend Dockerfile using Trivy
       id: scan_backend_dockerfile
       if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
@@ -208,7 +214,7 @@ jobs:
       uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
       with:
         image_name: backend
-        image_tag: latest
+        image_tag: ${{ env.COMMIT_SHORT_ID }}
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
@@ -220,7 +226,7 @@ jobs:
       uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
       with:
         image_name: frontend
-        image_tag: latest
+        image_tag: ${{ env.COMMIT_SHORT_ID }}
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
