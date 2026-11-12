@@ -23,7 +23,7 @@ on:
 
 env:
   IMAGE_TEST_TAG: ${{ format('test-v{0}', github.run_number) }}
-  COMMIT_FULL_ID: ${{ inputs.commit_id || github.sha }}
+  COMMIT_FULL_ID: ${{ inputs.commit_id || github.event.pull_request.head.sha || github.event.after || github.sha }}
 
 jobs:
   build:
@@ -37,6 +37,9 @@ jobs:
       check_no_scan: ${{ steps.check_commit_message.outputs.no_scan }}
       check_no_cache: ${{ steps.check_commit_message.outputs.no_cache }}
       is_latest_or_release_image: ${{ steps.check_existing_image.outputs.is_latest_or_release_image }}
+      trivy_send_mail: ${{ steps.trivy_report.outputs.send_mail }}
+      trivy_mail_artifact: ${{ steps.trivy_report.outputs.artifact_name }}
+      trivy_commit_author_email: ${{ steps.get_commit_info.outputs.committer_email }}
     steps:
       
     - name: Checkout code
@@ -111,17 +114,8 @@ jobs:
         echo "is_latest_or_release_image=$IS_LATEST_OR_RELEASE_IMAGE"
         echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED" >> $GITHUB_OUTPUT
         echo "is_image_tag_by_commit_id_existed=$IS_IMAGE_TAG_BY_COMMIT_ID_EXISTED"
-    - name: Get Job ID
-      if: steps.check_commit_message.outputs.no_ci != 'true'
-      id: get_job_id
-      run: |
-        job_id=$(curl -s -H "Authorization: Bearer ${{ secrets.PUSH_TOKEN }}" \
-        "https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs" \
-        | jq --arg job "${{ github.job }}" '.jobs[] | select(.name==$job) | .id')
-
-        echo "job_id=$job_id" >> $GITHUB_OUTPUT
-
     - name: Get Commit ID and Committer Info
+      id: get_commit_info
       run: |
         COMMIT_ID=${{ env.COMMIT_FULL_ID }}
 
@@ -147,6 +141,7 @@ jobs:
         echo "COMMIT_ID=${COMMIT_ID}" >> $GITHUB_ENV
         echo "COMMITTER_NAME=${COMMITTER_NAME}" >> $GITHUB_ENV
         echo "COMMITTER_EMAIL=${COMMITTER_EMAIL}" >> $GITHUB_ENV
+        echo "committer_email=${COMMITTER_EMAIL}" >> $GITHUB_OUTPUT
         echo "COMMIT_ID: $COMMIT_ID"
         echo "COMMITTER_NAME: $COMMITTER_NAME"
         echo "COMMITTER_EMAIL: $COMMITTER_EMAIL"
@@ -172,6 +167,7 @@ jobs:
         username: '${{ github.repository_owner }}'
         password: '${{ secrets.GITHUB_TOKEN }}'
     - name: Build services with Docker Compose
+      id: build_services
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
         steps.check_existing_image.outputs.is_image_tag_by_commit_id_existed == 'false') && 
@@ -183,6 +179,64 @@ jobs:
           docker compose -f docker-compose.yml logs --no-color --tail=200 postgres || true
           exit 1
         fi
+
+    - name: Tag local images with commit SHA for Trivy
+      if: steps.build_services.outcome == 'success'
+      run: |
+        docker tag backend:latest "backend:${COMMIT_SHORT_ID}"
+        docker tag frontend:latest "frontend:${COMMIT_SHORT_ID}"
+
+    - name: Scan backend Dockerfile using Trivy
+      id: scan_backend_dockerfile
+      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+      uses: svtechnmaa/.github/actions/trivy-dockerfile-scan@fix/consolidated-trivy-report
+      with:
+        dockerfile_path: ./backend/Dockerfile
+        trivy_server: ${{ secrets.TRIVY_SERVER }}
+        commit_id: ${{ env.COMMIT_ID }}
+        commit_author_name: ${{ env.COMMITTER_NAME }}
+        ignore_finding: 'false'
+
+    - name: Scan frontend Dockerfile using Trivy
+      id: scan_frontend_dockerfile
+      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true'
+      uses: svtechnmaa/.github/actions/trivy-dockerfile-scan@fix/consolidated-trivy-report
+      with:
+        dockerfile_path: ./frontend/Dockerfile
+        trivy_server: ${{ secrets.TRIVY_SERVER }}
+        commit_id: ${{ env.COMMIT_ID }}
+        commit_author_name: ${{ env.COMMITTER_NAME }}
+        ignore_finding: 'false'
+
+    - name: Scan backend image using Trivy
+      id: scan_backend_image
+      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && steps.build_services.outcome == 'success'
+      uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
+      with:
+        image_name: backend
+        image_tag: ${{ env.COMMIT_SHORT_ID }}
+        trivy_server: ${{ secrets.TRIVY_SERVER }}
+        commit_id: ${{ env.COMMIT_ID }}
+        commit_author_name: ${{ env.COMMITTER_NAME }}
+        ignore_finding: 'false'
+
+    - name: Scan frontend image using Trivy
+      id: scan_frontend_image
+      if: steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && steps.build_services.outcome == 'success'
+      uses: svtechnmaa/.github/actions/trivy-image-scan@fix/consolidated-trivy-report
+      with:
+        image_name: frontend
+        image_tag: ${{ env.COMMIT_SHORT_ID }}
+        trivy_server: ${{ secrets.TRIVY_SERVER }}
+        commit_id: ${{ env.COMMIT_ID }}
+        commit_author_name: ${{ env.COMMITTER_NAME }}
+        ignore_finding: 'false'
+
+    - name: Report all Trivy scans
+      id: trivy_report
+      if: always() && steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && (steps.scan_backend_dockerfile.outcome != 'skipped' || steps.scan_frontend_dockerfile.outcome != 'skipped' || steps.scan_backend_image.outcome != 'skipped' || steps.scan_frontend_image.outcome != 'skipped')
+      uses: svtechnmaa/.github/actions/trivy-report@fix/consolidated-trivy-report
+
     - name: Wait for services to be healthy
       if: |
         (github.event_name == 'push' || github.event_name == 'pull_request' || 
@@ -253,6 +307,23 @@ jobs:
         docker tag frontend:latest ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
         docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
         docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
+
+  notify_trivy:
+    name: Send Trivy report after Summary is available
+    needs: build
+    if: always() && needs.build.outputs.trivy_send_mail == 'true'
+    runs-on: ubuntu-dind
+    permissions:
+      actions: read
+    steps:
+    - name: Mail completed Trivy report
+      uses: svtechnmaa/.github/actions/trivy-mail@fix/consolidated-trivy-report
+      with:
+        artifact_name: ${{ needs.build.outputs.trivy_mail_artifact }}
+        mail_username: ${{ vars.MAIL_USERNAME }}
+        mail_password: ${{ secrets.MAIL_PASSWORD }}
+        mail_receivers: ${{ needs.build.outputs.trivy_commit_author_email }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+        it_team_email: ${{ vars.IT_TEAM_EMAIL }}
 
   # test:
   #   if: |
@@ -574,6 +645,7 @@ jobs:
     needs:
       - build
       - release
+      - notify_trivy
     runs-on: ubuntu-dind
     steps:
       - name: Check job results
