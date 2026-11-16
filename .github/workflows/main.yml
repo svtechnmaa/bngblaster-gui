@@ -232,6 +232,13 @@ jobs:
         commit_author_name: ${{ env.COMMITTER_NAME }}
         ignore_finding: 'false'
 
+    - name: Set up Node.js for Trivy report
+      if: always() && steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && (steps.scan_backend_dockerfile.outcome != 'skipped' || steps.scan_frontend_dockerfile.outcome != 'skipped' || steps.scan_backend_image.outcome != 'skipped' || steps.scan_frontend_image.outcome != 'skipped')
+      uses: actions/setup-node@v7
+      with:
+        node-version: 24
+        package-manager-cache: false
+
     - name: Report all Trivy scans
       id: trivy_report
       if: always() && steps.check_commit_message.outputs.no_ci != 'true' && steps.check_commit_message.outputs.no_scan != 'true' && (steps.scan_backend_dockerfile.outcome != 'skipped' || steps.scan_frontend_dockerfile.outcome != 'skipped' || steps.scan_backend_image.outcome != 'skipped' || steps.scan_frontend_image.outcome != 'skipped')
