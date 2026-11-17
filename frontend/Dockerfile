@@ -30,5 +30,5 @@ RUN sed -i -e '/^[[:space:]]*user[[:space:]]/d' \
 USER nginx
 RUN nginx -t
 
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
