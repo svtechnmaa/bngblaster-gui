@@ -40,6 +40,7 @@ jobs:
       trivy_send_mail: ${{ steps.trivy_report.outputs.send_mail }}
       trivy_mail_artifact: ${{ steps.trivy_report.outputs.artifact_name }}
       trivy_commit_author_email: ${{ steps.get_commit_info.outputs.committer_email }}
+      scan_bypassed: ${{ steps.trivy_status.outputs.scan_bypassed }}
     steps:
       
     - name: Checkout code
@@ -308,6 +309,16 @@ jobs:
         docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${{ env.IMAGE_TEST_TAG }}
         docker push ghcr.io/svtechnmaa/${FRONTEND_IMAGE_NAME}:${COMMIT_SHORT_ID}
 
+    - name: Finalize Trivy scan status
+      id: trivy_status
+      if: always()
+      uses: svtechnmaa/.github/actions/trivy-check-scan-status@fix/consolidated-trivy-report
+      with:
+        job_status: ${{ job.status }}
+        report_outcome: ${{ steps.trivy_report.outcome }}
+        finding_count: ${{ steps.trivy_report.outputs.finding_count }}
+        gate_failed: ${{ steps.trivy_report.outputs.gate_failed }}
+
   notify_trivy:
     name: Send Trivy report after Summary is available
     needs: build
@@ -447,7 +458,12 @@ jobs:
   #         ./report.html
 
   release:
-    if: (github.event_name == 'push' || github.event_name == 'pull_request') && needs.build.outputs.check_no_ci != 'true'
+    if: >-
+      always() && !cancelled() &&
+      (github.event_name == 'push' || github.event_name == 'pull_request') &&
+      needs.build.outputs.check_no_ci != 'true' &&
+      (needs.build.result == 'success' ||
+       (needs.build.result == 'failure' && needs.build.outputs.scan_bypassed == 'true'))
     needs:
       - build
     runs-on: ubuntu-dind
@@ -649,6 +665,6 @@ jobs:
     runs-on: ubuntu-dind
     steps:
       - name: Check job results
-        uses: svtechnmaa/.github/actions/check_job_results@main
+        uses: svtechnmaa/.github/actions/check_job_results@fix/consolidated-trivy-report
         with:
           jobs: ${{ toJSON(needs) }}
