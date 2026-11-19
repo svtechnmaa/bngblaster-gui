@@ -123,7 +123,3 @@ scripts/         migrate_from_main.py
 - [Deployment guide](docs/DEPLOYMENT.md) — production hardening, SSO, migration
 - [Admin guide](docs/ADMIN_GUIDE.md) — setup, curl cheatsheet, troubleshooting
 - [Upgrade plan](docs/UPGRADE_PLAN.md) — improvement roadmap (security, stability, DX)
-
-## CI workflow flow
-
-See [the CI and required security workflow diagram](docs/trivy-flow.md) for triggers, scan actions, reporting, and email.
