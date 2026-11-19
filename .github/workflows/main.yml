@@ -37,9 +37,9 @@ jobs:
       check_no_scan: ${{ steps.check_commit_message.outputs.no_scan }}
       check_no_cache: ${{ steps.check_commit_message.outputs.no_cache }}
       is_latest_or_release_image: ${{ steps.check_existing_image.outputs.is_latest_or_release_image }}
-      trivy_send_mail: ${{ steps.trivy_report.outputs.send_mail }}
-      trivy_mail_artifact: ${{ steps.trivy_report.outputs.artifact_name }}
-      trivy_commit_author_email: ${{ steps.get_commit_info.outputs.committer_email }}
+      notification_required: ${{ steps.trivy_report.outputs.notification_required }}
+      notification_artifact_name: ${{ steps.trivy_report.outputs.notification_artifact_name }}
+      commit_author_email: ${{ steps.get_commit_info.outputs.committer_email }}
       scan_bypassed: ${{ steps.trivy_status.outputs.scan_bypassed }}
     steps:
       
@@ -322,7 +322,7 @@ jobs:
   notify_trivy:
     name: Send Trivy report
     needs: build
-    if: always() && needs.build.outputs.trivy_send_mail == 'true'
+    if: always() && needs.build.outputs.notification_required == 'true'
     runs-on: ubuntu-dind
     permissions:
       actions: read
@@ -330,10 +330,10 @@ jobs:
     - name: Mail completed Trivy report
       uses: svtechnmaa/.github/actions/trivy-mail@fix/consolidated-trivy-report
       with:
-        artifact_name: ${{ needs.build.outputs.trivy_mail_artifact }}
+        notification_artifact_name: ${{ needs.build.outputs.notification_artifact_name }}
         mail_username: ${{ vars.MAIL_USERNAME }}
         mail_password: ${{ secrets.MAIL_PASSWORD }}
-        mail_receivers: ${{ needs.build.outputs.trivy_commit_author_email }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
+        mail_receivers: ${{ needs.build.outputs.commit_author_email }},${{ vars.DEFAULT_MAIL_RECIPIENTS }}
         it_team_email: ${{ vars.IT_TEAM_EMAIL }}
 
   # test:
