@@ -196,7 +196,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        ignore_finding: 'true'
+        allow_vulnerabilities: 'true'
 
     - name: Scan frontend Dockerfile using Trivy
       id: scan_frontend_dockerfile
@@ -207,7 +207,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        ignore_finding: 'true'
+        allow_vulnerabilities: 'true'
 
     - name: Scan backend image using Trivy
       id: scan_backend_image
@@ -219,7 +219,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        ignore_finding: 'true'
+        allow_vulnerabilities: 'true'
 
     - name: Scan frontend image using Trivy
       id: scan_frontend_image
@@ -231,7 +231,7 @@ jobs:
         trivy_server: ${{ secrets.TRIVY_SERVER }}
         commit_id: ${{ env.COMMIT_ID }}
         commit_author_name: ${{ env.COMMITTER_NAME }}
-        ignore_finding: 'true'
+        allow_vulnerabilities: 'true'
 
     - name: Report all Trivy scans
       id: trivy_report
@@ -320,7 +320,7 @@ jobs:
         gate_failed: ${{ steps.trivy_report.outputs.gate_failed }}
 
   notify_trivy:
-    name: Send Trivy report after Summary is available
+    name: Send Trivy report
     needs: build
     if: always() && needs.build.outputs.trivy_send_mail == 'true'
     runs-on: ubuntu-dind
