@@ -54,7 +54,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "3001:8080"
+      - "3001:80"
     restart: unless-stopped
 
 volumes:

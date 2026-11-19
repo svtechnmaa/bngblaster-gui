@@ -9,14 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN groupadd --gid 10001 appuser \
-    && useradd --uid 10001 --gid appuser --create-home appuser \
-    && chown appuser:appuser /app
-
-COPY --chown=appuser:appuser app ./app
-
-USER appuser
-RUN test "$(id -u)" -ne 0 && test -w /app
+COPY app ./app
 
 EXPOSE 8000
 
